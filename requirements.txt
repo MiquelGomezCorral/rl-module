@@ -1,0 +1,6 @@
+app==0.1.0
+gymnasium==1.2.0
+pip-chill==1.0.3
+tensorboard==2.20.0
+torch==2.8.0
+uv==0.8.11

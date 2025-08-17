@@ -1,0 +1,50 @@
+import os
+import dataclasses
+from dataclasses import dataclass
+
+import torch 
+from argparse import Namespace
+
+@dataclass 
+class Configuration:
+    # ================== Paths ==================
+    TEMP:   str = "temp"
+    VIDEOS: str = "videos"
+
+    runs_path:   str = os.path.join(TEMP, "runs")
+    wandb_path:  str = os.path.join(TEMP, "wandb")
+
+    # ================== Variables ==================
+    exp_name:      str = "base_name"
+    seed:          int = 42
+    record_video: bool = False
+    fps:           int = 30
+
+    gym_id:          str = "CartPole-v1"
+    n_envs:          int = 4
+    learning_rate: float = 2.5e-4
+    total_timesteps: int = 25_000
+
+    torch_deterministic: bool = True
+    cuda:                bool = True
+    device:      torch.device = None
+
+    track_run:         bool = False
+    wandb_project_name: str = "RL"
+    wandb_entity:       str = None
+
+
+def args_to_config(args: Namespace) -> Configuration:
+    """Creates a configuration object from the args parser
+    If any field is not included in the Configuration class
+    i will be skiped
+
+    Args:
+        args (_type_): The arguments
+
+    Returns:
+        Configuration: The Configuration object
+    """
+    fields = {f.name for f in dataclasses.fields(Configuration)}
+    filtered = {k: v for k, v in vars(args).items() if k in fields}
+    return Configuration(**filtered)
