@@ -29,6 +29,41 @@ class AgentAC(nn.Module):
             layer_init(nn.Linear(64, self.action_dim), std=0.01) 
         )
 
+    def get_value(self, state: np.ndarray):
+        """Get the critic value for state 
+
+        Args:
+            x (np.array): The state to evaluate
+
+        Returns:
+            tensor: The evaluated tensor
+        """
+        return self.critic(state)
+    
+    def get_action_value(self, state, action=None):
+        """
+        Compute the action, log-probability, entropy, and state value for a given state.
+
+        Args:
+            state (torch.Tensor or np.ndarray): The input state(s) for the policy and value network.
+            action (torch.Tensor, optional): Pre-selected action. If None, an action is sampled from the policy.
+
+        Returns:
+            tuple:
+                action (torch.Tensor): Selected or sampled action(s).
+                log_prob (torch.Tensor): Log-probability of the action(s) under the current policy.
+                entropy (torch.Tensor): Entropy of the policy distribution for exploration measurement.
+                value (torch.Tensor): Critic value estimate for the given state(s).
+        """
+        logits = self.actor(state)
+        # Softmax like operation
+        probs = Categorical(logits=logits)
+        if action is None:
+            action = probs.sample()
+
+        return action, probs.log_prob(action), probs.entropy(), self.critic(state)
+
+
 
 def layer_init(layer: Any, std: float = np.sqrt(2), bias_const: float = 0.0) -> Any:
     """Initialize the values of a layer

@@ -54,6 +54,10 @@ def parse_args_config():
         "-ts", "--total_timesteps", type=int, default=25_000,
         help="Total timesteps of the experiments"
     )
+    parser.add_argument(
+        "-ns", "--num_steps", type=int, default=128,
+        help="The number of steps to run in each environment per polcy rollout."
+    )
 
     # ===================== GPU =====================
     parser.add_argument(
@@ -79,8 +83,11 @@ def parse_args_config():
         help="Name of the ntity (team) of wandb's project."
     )
     args = parser.parse_args()
+    CONFIG = args_to_config(args)
+
+    CONFIG.batch_size = int(CONFIG.n_envs * CONFIG.n_steps) 
     
-    return args_to_config(args)
+    return CONFIG
     
 
 if __name__ == "__main__":

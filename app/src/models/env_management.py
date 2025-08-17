@@ -2,6 +2,17 @@ import gymnasium as gym
 
 from src.config import Configuration
 
+
+def get_envs(CONFIG): 
+    envs =  gym.vector.SyncVectorEnv([
+        get_env_trunk(CONFIG, idx)
+        for idx in range(CONFIG.n_envs)
+    ])
+    assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete actions space is supported"
+
+    return envs
+
+
 def create_env(CONFIG: Configuration, idx: int) -> gym.Env:
     """Create an environment from configuration
 
