@@ -1,6 +1,9 @@
 import numpy as np
 import gymnasium as gym
 
+import torch.optim as optim
+
+from src.models.agent import AgentAC
 from src.models.env_management import get_env_trunk
 from src.config import Configuration
 
@@ -20,6 +23,10 @@ def train_ppo(CONFIG: Configuration) -> None:
     assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete actions space is supported"
     print(f"{envs.single_action_space.shape = }")
     print(f"{envs.single_observation_space.shape = }")
+
+    # ================== AGENT ==================
+    agent = AgentAC(envs).to(CONFIG.device)
+    optimizer = optim.Adam(agent.parameters(), lr=CONFIG.learning_rate, eps=CONFIG.eps)
 
     # ================== RUN ==================
     states, info = envs.reset()

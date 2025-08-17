@@ -22,6 +22,7 @@ class Configuration:
 
     gym_id:          str = "CartPole-v1"
     n_envs:          int = 4
+    eps:           float = 1e-5 # DO NOT TOUCH! is for the alogrithm, is not even in the args ;)
     learning_rate: float = 2.5e-4
     total_timesteps: int = 25_000
 
