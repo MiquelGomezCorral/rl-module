@@ -3,7 +3,23 @@ import gymnasium as gym
 from src.config import Configuration
 
 
-def get_envs(CONFIG): 
+def get_envs(CONFIG: Configuration) -> gym.vector.SyncVectorEnv:
+    """
+    Create and return a vectorized environment for training.
+
+    This function generates multiple synchronized environments using `SyncVectorEnv`
+    according to the number of environments specified in the configuration. It ensures
+    that the action space is discrete (for compatibility with current agents).
+
+    Args:
+        CONFIG (Configuration): Configuration object containing environment settings, 
+            including `gym_id` (str) and `n_envs` (int).
+
+    Returns:
+        gym.vector.SyncVectorEnv: A vectorized environment instance suitable for training
+            with multiple parallel environments.
+    """
+
     envs =  gym.vector.SyncVectorEnv([
         get_env_trunk(CONFIG, idx)
         for idx in range(CONFIG.n_envs)

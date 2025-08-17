@@ -40,7 +40,7 @@ class AgentAC(nn.Module):
         """
         return self.critic(state)
     
-    def get_action_value(self, state, action=None):
+    def get_action_value(self, state, action=None) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Compute the action, log-probability, entropy, and state value for a given state.
 

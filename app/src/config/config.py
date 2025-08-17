@@ -24,6 +24,7 @@ class Configuration:
     n_envs:          int = 4
     eps:           float = 1e-5 # DO NOT TOUCH! is for the alogrithm, is not even in the args ;)
     learning_rate: float = 2.5e-4
+    anneal_lr:      bool = True
     total_timesteps: int = 25_000
     n_steps:       int = 128
     batch_size:      int = 512 # n_envs * num_steps. Will be initialized at 'parse_args_config'

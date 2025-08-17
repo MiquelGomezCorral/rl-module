@@ -11,8 +11,8 @@ from src.config import Configuration, args_to_config
 
 
 
-def main(CONFIG: Configuration):
-    train_ppo(CONFIG)
+def main(CONFIG: Configuration, writer: SummaryWriter):
+    train_ppo(CONFIG, writer)
 
 
 
@@ -53,6 +53,10 @@ def parse_args_config():
     parser.add_argument(
         "-ts", "--total_timesteps", type=int, default=25_000,
         help="Total timesteps of the experiments"
+    )
+    parser.add_argument(
+        "-alr", "--anneal_lr", action='store_false', default=True,
+        help="Toggle leaning rate annealing for policy and value networks"
     )
     parser.add_argument(
         "-ns", "--num_steps", type=int, default=128,
@@ -119,4 +123,4 @@ if __name__ == "__main__":
     set_seed(CONFIG.seed)
     CONFIG.device = get_device(CONFIG)
 
-    main(CONFIG)
+    main(CONFIG, writer)
