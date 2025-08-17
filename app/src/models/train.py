@@ -44,7 +44,7 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
     global_step = 0
     start_time  = time.time()
     next_obs    = torch.Tensor(envs.reset()[0]).to(CONFIG.device)
-    next_dones  = torch.zeros(CONFIG.n_envs).to(CONFIG.device)
+    next_done   = torch.zeros(CONFIG.n_envs).to(CONFIG.device)
     num_updates = CONFIG.total_timesteps // CONFIG.batch_size
 
     # ================== TRAININ LOOP ==================
@@ -64,7 +64,7 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
             # 2.1 Updating variables
             global_step += CONFIG.n_envs
             obs[step] = next_obs
-            dones[step] = next_dones
+            dones[step] = next_done
 
             # 2.2 Getting the model actions / predictions
             with torch.no_grad():
@@ -78,7 +78,7 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
             next_obs, reward, term, trunc, info = envs.step(action.cpu().numpy())
             rewards[step] = torch.tensor(reward).to(CONFIG.device).view(-1)
             next_obs   = torch.Tensor(next_obs).to(CONFIG.device)
-            next_dones = torch.Tensor(term | trunc).to(CONFIG.device)
+            next_done = torch.Tensor(term | trunc).to(CONFIG.device)
 
             if global_step % 1_000 == 0:
                 for k, v in info.items():
@@ -90,9 +90,73 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
                     writer.add_scalar("charts/episodic_length", v['l'].mean().item(), global_step)
                     break
 
+        # 3. Bootstrap reward if not done (GAE thing)
+        with torch.no_grad():
+            next_value = agent.get_value(next_obs).reshape(1, -1)
+            if CONFIG.gae:
+                advantages = torch.zeros_like(rewards).to(CONFIG.device)
+                last_gae_lam = 0
+                for t in reversed(range(CONFIG.n_steps)):
+                    if t == CONFIG.n_steps - 1:
+                        next_non_terminal = 1.0 - next_done
+                        next_values = next_value
+                    else: 
+                        next_non_terminal = 1.0 - dones[t + 1]
+                        next_values = values[t + 1]
+                    
+                    delta = rewards[t] = CONFIG.gamma * next_values * next_non_terminal - values[t]
+                    advantages[t] = last_gae_lam = ( # Yeah this is correct
+                        delta + CONFIG.gamma * CONFIG.gae_lambda * next_non_terminal * last_gae_lam
+                    )
+                returns =  advantages + values 
+
+            else:
+                returns = torch.zeros_like(rewards).to(CONFIG.device)
+                for t in reversed(range(CONFIG.n_steps)):
+                    if t == CONFIG.n_steps - 1:
+                        next_non_terminal = 1.0 - next_done
+                        next_return = next_value
+                    else:
+                        next_non_terminal = 1.0 - dones[t + 1]
+                        next_return = returns[t + 1]
+                    
+                    returns[t] = rewards[t] + CONFIG.gamma * next_non_terminal * next_return
+                
+                advantages = returns - values
+
+        # 4. flatten the batch
+        b_obs        = obs.reshape((-1,) + envs.single_observation_space.shape)
+        b_logprobs   = logprobs.reshape(-1)
+        b_actions    = actions.reshape((-1,) + envs.single_action_space.shape)
+        b_advantages = advantages.reshape(-1)
+        b_returns    = returns.reshape(-1)
+        b_values     = values.reshape(-1)
+
+        # 5. Minibaches
+        b_inds = np.arange(CONFIG.batch_size)
+        for epoch in range(CONFIG.update_epochs):
+            np.random.shuffle(b_inds)
+            for start in range(0, CONFIG.batch_size, CONFIG.mini_batch_size):
+                # 5.1 prepare baches
+                end = start + CONFIG.mini_batch_size
+                mb_inds = b_inds[start:end] # Mini batch indices
+
+                # 5.2 Train beggins
+                _, new_log_probs, entropy, new_values = agent.get_action_value(
+                    b_obs[mb_inds], b_actions.long()[mb_inds]
+                )
+                log_ratio = new_log_probs - b_logprobs[mb_inds]
+                ratio = log_ratio.exp()
+
+                # 5.3 Advantage 
+                mb_advantages = b_advantages[mb_inds]
+                
+
+    end_time = time.time()
+    print(f"Total time {end_time - start_time:.4f}s")
 
 
-def evaluate_model(model, CONIFG: Configuration):
+def evaluate_model(model, CONIFG: Configuration): 
     ... 
     # states, info = envs.reset()
     # for episode in range(10):

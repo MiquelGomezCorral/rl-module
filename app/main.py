@@ -59,8 +59,28 @@ def parse_args_config():
         help="Toggle leaning rate annealing for policy and value networks"
     )
     parser.add_argument(
-        "-ns", "--num_steps", type=int, default=128,
+        "-gae", "--gae", action='store_false', default=True,
+        help="Toggle use of General Advantage Estimator (GAE) for advantage computation"
+    )
+    parser.add_argument(
+        "-g", "--gamma", type=float, default=0.99,
+        help="The discount factor gamma"
+    )
+    parser.add_argument(
+        "-gae_l", "--gae_l", type=float, default=0.95,
+        help="The lambda for the general advantage estimator"
+    )
+    parser.add_argument(
+        "-ns", "--n_steps", type=int, default=128,
         help="The number of steps to run in each environment per polcy rollout."
+    )
+    parser.add_argument(
+        "-b", "--n_mini_batches", type=int, default=4,
+        help="The number mini batches."
+    )
+    parser.add_argument(
+        "-ue", "--update_epochs", type=int, default=4,
+        help="The K epochs to update the policy."
     )
 
     # ===================== GPU =====================
@@ -90,6 +110,7 @@ def parse_args_config():
     CONFIG = args_to_config(args)
 
     CONFIG.batch_size = int(CONFIG.n_envs * CONFIG.n_steps) 
+    CONFIG.mini_batch_size = int(CONFIG.batch_size // CONFIG.n_mini_batches) 
     
     return CONFIG
     
