@@ -201,7 +201,6 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
             # END FOR START
             # Early stop batch level
             if CONFIG.target_kl is not None and approx_kl > CONFIG.target_kl:
-                print("EARLY STOPPING")
                 break
         # END FOR 
         
@@ -231,7 +230,9 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
 
     print_separator("RESUME", sep_type="LONG")
     save_model(agent, CONFIG)
-    print_time(time.time() - start_time, prefix=" - ")
+    tot_time = time.time() - start_time
+    print(f" - Total seconds: {tot_time}")
+    print_time(tot_time, prefix=" - ")
 
 
     return agent
