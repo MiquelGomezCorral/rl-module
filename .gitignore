@@ -210,3 +210,7 @@ temp/
 videos/
 app/videos/
 app/temp/
+
+/**/*.pkl
+/**/*.pth
+/**/*.pt
