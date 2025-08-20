@@ -34,6 +34,7 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
     # ================== VARS ==================
     # Store setup
     obs      = torch.zeros((CONFIG.n_steps, CONFIG.n_envs) + (agent.obs_dim,)   ).to(CONFIG.device)
+    """"""
     # actions  = torch.zeros((CONFIG.n_steps, CONFIG.n_envs) + (agent.action_dim,)).to(CONFIG.device)
     actions  = torch.zeros((CONFIG.n_steps, CONFIG.n_envs)).to(CONFIG.device)
     logprobs = torch.zeros((CONFIG.n_steps, CONFIG.n_envs)).to(CONFIG.device)
@@ -44,6 +45,8 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
     # ================== OTHERS ==================
     global_step = 0
     start_time  = time.time()
+    """"""
+    # next_obs    = torch.Tensor(envs.reset()).to(CONFIG.device)
     next_obs    = torch.Tensor(envs.reset()[0]).to(CONFIG.device)
     next_done   = torch.zeros(CONFIG.n_envs).to(CONFIG.device)
     num_updates = CONFIG.total_timesteps // CONFIG.batch_size
@@ -105,7 +108,7 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
                         next_non_terminal = 1.0 - dones[t + 1]
                         next_values = values[t + 1]
                     
-                    delta = rewards[t] = CONFIG.gamma * next_values * next_non_terminal - values[t]
+                    delta = rewards[t] + CONFIG.gamma * next_values * next_non_terminal - values[t]
                     advantages[t] = last_gae_lam = ( # Yeah this is correct
                         delta + CONFIG.gamma * CONFIG.gae_lambda * next_non_terminal * last_gae_lam
                     )
