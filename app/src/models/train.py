@@ -81,15 +81,15 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
             next_obs      = torch.Tensor(next_obs).to(CONFIG.device)
             next_done     = torch.Tensor(term | trunc).to(CONFIG.device)
 
-            if global_step % 1_000 == 0:
-                for k, v in info.items():
-                    if k != "episode": continue
-                    print(f"{global_step = } | {step = }")
-                    print(f" - episodic return {v['r']} | mean {v['r'].mean().item(): .2f}")
-                    print(f" - episodic length {v['l']} | mean {v['l'].mean().item(): .2f}")
-                    writer.add_scalar("charts/episodic_return", v['r'].mean().item(), global_step)
-                    writer.add_scalar("charts/episodic_length", v['l'].mean().item(), global_step)
-                    break
+            # if global_step % 1_000 == 0:
+            #     for k, v in info.items():
+            #         if k != "episode": continue
+            #         print(f"{global_step = } | {step = }")
+            #         print(f" - episodic return {v['r']} | mean {v['r'].mean().item(): .2f}")
+            #         print(f" - episodic length {v['l']} | mean {v['l'].mean().item(): .2f}")
+            #         writer.add_scalar("charts/episodic_return", v['r'].mean().item(), global_step)
+            #         writer.add_scalar("charts/episodic_length", v['l'].mean().item(), global_step)
+            #         break
 
         # 3. Bootstrap reward if not done (GAE thing)
         with torch.no_grad():
@@ -176,7 +176,7 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
                         CONFIG.clip_coef
                     )
                     v_loss_clipped = (v_clipped - b_returns[mb_ids]) ** 2
-                    v_loss_max = torch.max(v_loss_unclipped, v_loss_unclipped)
+                    v_loss_max = torch.max(v_loss_clipped, v_loss_unclipped)
                     v_loss = 0.5 * v_loss_max.mean()
                 else: # Mean square error between predicted and returns
                     v_loss = 0.5 * ((new_value - b_returns[mb_ids]) ** 2).mean()
