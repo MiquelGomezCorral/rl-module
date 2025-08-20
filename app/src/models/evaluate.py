@@ -54,17 +54,25 @@ def evaluate_agent(agent: AgentAC, CONFIG: Configuration) -> tuple[float, float]
         states = torch.Tensor(next_states).to(CONFIG.device)
         dones = terms | truncs
 
-        for i, done in enumerate(dones):
-            if done and "episode" in infos[i]:
-                episode_rewards.append(infos[i]["episode"]["r"])
+        episode_rewards.append(np.array(rewards))
+        if all(dones): # stop early if all envs finished an episode
+            break
+    
 
     # ================================================================
     #                            DONE
     # ================================================================
     print_separator("RESUME", sep_type="LONG")
     envs.close()
-    mean_reward = float(np.mean(episode_rewards))
-    std_reward = float(np.std(episode_rewards))
+    # If no rewards collected -> return NaNs (safe)
+    if len(episode_rewards) == 0:
+        mean_reward, std_reward = float("nan"), float("nan")
+    else:
+        # episode_rewards: list of (T, n_envs) per-step reward arrays
+        rewards_arr = np.stack(episode_rewards, axis=0)      
+        per_env_returns = rewards_arr.sum(axis=0)         
+        mean_reward = float(np.mean(per_env_returns))
+        std_reward  = float(np.std(per_env_returns))
 
     print(f" - Mean rewards: {mean_reward:.4f}+-{std_reward:.4f}")
     print_time(time.time() - start_time, prefix=" - ")
