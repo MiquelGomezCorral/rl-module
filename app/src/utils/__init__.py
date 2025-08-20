@@ -1,1 +1,1 @@
-from .utils import set_seed, get_device
+from .utils import set_seed, get_device, save_model

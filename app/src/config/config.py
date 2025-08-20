@@ -12,7 +12,8 @@ class Configuration:
     seed:          int = 42
     record_video: bool = False
     remove_old_video: bool = False
-    fps:           int = 30
+    fps:             int = 30
+    n_eval_episodes: int = 25
 
     gym_id:          str = "CartPole-v1"
     n_envs:          int = 4
@@ -47,13 +48,16 @@ class Configuration:
     # ================== Paths ==================
     TEMP:   str = "../temp"
     VIDEOS: str = "../videos"
+    MODELS: str = "../models"
 
-    runs_path:   str = os.path.join(TEMP, "runs")
-    wandb_path:  str = os.path.join(TEMP, "wandb")
+    runs_path:    str = os.path.join(TEMP, "runs")
+    wandb_path:   str = os.path.join(TEMP, "wandb")
     videos_path:  str = os.path.join(VIDEOS, exp_name)
+    models_path:  str = os.path.join(MODELS, exp_name)
 
     def __post_init__(self):
         self.videos_path = os.path.join(self.VIDEOS,  self.exp_name)
+        self.models_path = os.path.join(self.MODELS,  self.exp_name)
 
 def args_to_config(args: Namespace) -> Configuration:
     """Creates a configuration object from the args parser

@@ -1,5 +1,5 @@
-from typing import Any
 import numpy as np
+from typing import Any
 
 import torch
 import torch.nn as nn
@@ -9,11 +9,11 @@ from torch.distributions.categorical import Categorical
 class AgentAC(nn.Module):
     def __init__(self, envs):
         super(AgentAC, self).__init__()
-        self.obs_dim = np.array(envs.single_observation_space.shape).prod() # intup state
+        self.state_dim = np.array(envs.single_observation_space.shape).prod() # intup state
         self.action_dim = envs.single_action_space.n                       # output action
 
         self.critic = nn.Sequential(
-            layer_init(nn.Linear(self.obs_dim, 64)),
+            layer_init(nn.Linear(self.state_dim, 64)),
             nn.Tanh(),
             layer_init(nn.Linear(64,64)),
             nn.Tanh(),
@@ -21,7 +21,7 @@ class AgentAC(nn.Module):
         )
 
         self.actor = nn.Sequential(
-            layer_init(nn.Linear(self.obs_dim, 64)),
+            layer_init(nn.Linear(self.state_dim, 64)),
             nn.Tanh(),
             layer_init(nn.Linear(64,64)),
             nn.Tanh(),

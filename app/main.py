@@ -5,15 +5,19 @@ from dataclasses import asdict
 
 from torch.utils.tensorboard import SummaryWriter
 
-from src.models import train_ppo
+from src.models import train_ppo, evaluate_agent
 from src.utils import set_seed, get_device
 from src.config import Configuration, args_to_config
 
 from maikol_utils.file_utils import clear_directories
+from maikol_utils.print_utils import print_separator
 
 
 def main(CONFIG: Configuration, writer: SummaryWriter):
-    train_ppo(CONFIG, writer)
+    agent = train_ppo(CONFIG, writer)
+    mean_reward, std_reward = evaluate_agent(agent, CONFIG)
+
+    print_separator("DONE!", sep_type="START")
 
 
 
@@ -39,6 +43,10 @@ def parse_args_config():
     parser.add_argument(
         "-rv", "--remove_old_video", action='store_true', default=False,
         help="if toggled (-rv), videos of the execution of the model will be recorded and saved."
+    )
+    parser.add_argument(
+        "-ep", "--n_eval_episodes", type=int, default=25,
+        help="Total number episodes to evaluate the agent"
     )
     
 

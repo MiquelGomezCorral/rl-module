@@ -11,8 +11,9 @@ import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 
 from src.config import Configuration
-from src.models.agent import AgentAC
+from src.models.agent import AgentAC # separated because they are in the same module 
 from src.models.env_management import get_envs
+from src.utils import save_model
 
 
 def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
@@ -23,24 +24,24 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
     """
     print_separator(f"TRAINING PPO '{CONFIG.exp_name}'", sep_type="START")
     print_separator("CONFIGURATION", sep_type="LONG")
-    # ======================================================
-    #                   ENV MANAGEMENT
-    # ======================================================
+    # ================================================================
+    #                       ENV MANAGEMENT
+    # ================================================================
     print(f" - Creating envs...")
     # envs = create_env(CONFIG)
     envs = get_envs(CONFIG)
-    # ======================================================
-    #                   AGENT & VARS
-    # ======================================================
-    print(f" - Creating agent...")
+    # ================================================================
+    #                           AGENT & VARS
+    # ================================================================
+    print(f" - Creating agent and vars...")
     # ================== AGENT ==================
     agent = AgentAC(envs).to(CONFIG.device)
     optimizer = optim.Adam(agent.parameters(), lr=CONFIG.learning_rate, eps=CONFIG.eps)
 
-    print(f"   - Observation dimension: {agent.obs_dim}. Action dimensions: {agent.action_dim}")
+    print(f"   - Observation dimension: {agent.state_dim}. Action dimensions: {agent.action_dim}")
     # ================== VARS ==================
     # Store setup
-    obs      = torch.zeros((CONFIG.n_steps, CONFIG.n_envs) + (agent.obs_dim,)   ).to(CONFIG.device)
+    states      = torch.zeros((CONFIG.n_steps, CONFIG.n_envs) + (agent.state_dim,)).to(CONFIG.device)
     actions  = torch.zeros((CONFIG.n_steps, CONFIG.n_envs)).to(CONFIG.device)
     logprobs = torch.zeros((CONFIG.n_steps, CONFIG.n_envs)).to(CONFIG.device)
     rewards  = torch.zeros((CONFIG.n_steps, CONFIG.n_envs)).to(CONFIG.device)
@@ -51,13 +52,15 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
     print(f" - Others...")
     global_step = 0
     start_time  = time.time()
-    next_obs    = torch.Tensor(envs.reset()[0]).to(CONFIG.device)
+    next_states    = torch.Tensor(envs.reset()[0]).to(CONFIG.device)
     next_done   = torch.zeros(CONFIG.n_envs).to(CONFIG.device)
     num_updates = CONFIG.total_timesteps // CONFIG.batch_size
 
-    # ================== TRAINING LOOP ==================
+    # ================================================================
+    #                       TRAINING LOOP
+    # ================================================================
     print_separator("TRAINING", sep_type="SUPER")
-    print(f" - Training for {CONFIG.total_timesteps} time steps and {CONFIG.batch_size} as batch size. {update} updates in total.")
+    print(f" - Training for {CONFIG.total_timesteps} time steps and {CONFIG.batch_size} as batch size. {num_updates} updates in total.")
     # Episodes?
     for update in tqdm(range(1, num_updates + 1)):
         # 1. Annealing the rate if config says so.
@@ -70,21 +73,21 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
         for step in range(CONFIG.n_steps):
             # 2.1 Updating variables
             global_step += CONFIG.n_envs
-            obs[step]   = next_obs
+            states[step]   = next_states
             dones[step] = next_done
 
             # 2.2 Getting the model actions / predictions
             with torch.no_grad():
-                action, logprob, _, value = agent.get_action_value(next_obs)
+                action, logprob, _, value = agent.get_action_value(next_states)
                 values[step] = value.flatten()
 
             actions[step] = action
             logprobs[step] = logprob   
         
             # 2.3 Acting in the environment
-            next_obs, reward, term, trunc, info = envs.step(action.cpu().numpy())
+            next_states, reward, term, trunc, info = envs.step(action.cpu().numpy())
             rewards[step] = torch.tensor(reward).to(CONFIG.device).view(-1)
-            next_obs      = torch.Tensor(next_obs).to(CONFIG.device)
+            next_states      = torch.Tensor(next_states).to(CONFIG.device)
             next_done     = torch.Tensor(term | trunc).to(CONFIG.device)
 
             if global_step % 1_000 == 0:
@@ -96,7 +99,7 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
 
         # 3. Bootstrap reward if not done (GAE thing)
         with torch.no_grad():
-            next_value = agent.get_value(next_obs).reshape(1, -1)
+            next_value = agent.get_value(next_states).reshape(1, -1)
             if CONFIG.gae:
                 advantages = torch.zeros_like(rewards).to(CONFIG.device)
                 last_gae_lam = 0
@@ -129,7 +132,7 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
                 advantages = returns - values
 
         # 4. flatten the batch
-        b_obs        = obs.reshape((-1,) + envs.single_observation_space.shape)
+        b_states     = states.reshape((-1,) + envs.single_observation_space.shape)
         b_logprobs   = logprobs.reshape(-1)
         b_actions    = actions.reshape((-1,) + envs.single_action_space.shape)
         b_advantages = advantages.reshape(-1)
@@ -148,7 +151,7 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
 
                 # 5.2 Train beggins
                 _, new_log_probs, entropy, new_values = agent.get_action_value(
-                    b_obs[mb_ids], b_actions.long()[mb_ids]
+                    b_states[mb_ids], b_actions.long()[mb_ids]
                 )
                 log_ratio = new_log_probs - b_logprobs[mb_ids]
                 ratio = log_ratio.exp()
@@ -202,6 +205,7 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
                 break
         # END FOR 
         
+
         # 6 Explained variance
         y_pred, y_true = b_values.cpu().numpy(), b_returns.cpu().numpy()
         var_y = np.var(y_true)
@@ -219,32 +223,15 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
     # END FOR UPDATES
 
-    # 7 DONE
+    # ================================================================
+    #                            DONE
+    # ================================================================
     envs.close()
     writer.close()
 
-    print_separator("TRAINING RESUME", sep_type="LONG")
-    end_time = time.time()
-    print_time(end_time - start_time)
-    
-    print_separator("DONE!", sep_type="START")
+    print_separator("RESUME", sep_type="LONG")
+    save_model(agent, CONFIG)
+    print_time(time.time() - start_time, prefix=" - ")
 
 
-def evaluate_model(model, CONIFG: Configuration): 
-    ... 
-    # states, info = envs.reset()
-    # for episode in range(10):
-    #     done_envs = np.zeros(CONFIG.n_envs, dtype=bool)
-    #     for step in range(200):
-    #         action = envs.action_space.sample()
-    #         states, rewards, terms, truncs, infos = envs.step(action)
-
-    #         done_envs |= terms | truncs 
-    #         if done_envs.all():
-    #             break
-
-    #     if 'episode' in infos:
-    #         print(f"Episode {episode:2} ends at step {step:3} with rewards {infos['episode']['r']}")
-
-        
-    # envs.close()
+    return agent
