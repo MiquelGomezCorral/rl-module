@@ -87,7 +87,7 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
             # 2.3 Acting in the environment
             next_states, reward, term, trunc, info = envs.step(action.cpu().numpy())
             rewards[step] = torch.tensor(reward).to(CONFIG.device).view(-1)
-            next_states      = torch.Tensor(next_states).to(CONFIG.device)
+            next_states   = torch.Tensor(next_states).to(CONFIG.device)
             next_done     = torch.Tensor(term | trunc).to(CONFIG.device)
 
             if global_step % 1_000 == 0:
