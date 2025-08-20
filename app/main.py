@@ -56,10 +56,6 @@ def parse_args_config():
         help="The leraning rate of the optimizer"
     )
     parser.add_argument(
-        "-ts", "--total_timesteps", type=int, default=25_000,
-        help="Total timesteps of the experiments"
-    )
-    parser.add_argument(
         "-alr", "--anneal_lr", action='store_false', default=True,
         help="Toggle leaning rate annealing for policy and value networks. (-alr store false)"
     )
@@ -68,12 +64,16 @@ def parse_args_config():
         help="Toggle use of General Advantage Estimator (GAE) for advantage computation. (-gae store false)"
     )
     parser.add_argument(
+        "-gae_l", "--gae_lambda", type=float, default=0.95,
+        help="The lambda for the general advantage estimator"
+    )
+    parser.add_argument(
         "-g", "--gamma", type=float, default=0.99,
         help="The discount factor gamma"
     )
     parser.add_argument(
-        "-gae_l", "--gae_l", type=float, default=0.95,
-        help="The lambda for the general advantage estimator"
+        "-ts", "--total_timesteps", type=int, default=25_000,
+        help="Total timesteps of the experiments"
     )
     parser.add_argument(
         "-ns", "--n_steps", type=int, default=128,

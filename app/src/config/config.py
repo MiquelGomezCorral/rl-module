@@ -27,8 +27,8 @@ class Configuration:
     learning_rate: float = 2.5e-4
     anneal_lr:      bool = True
     gae:            bool = True
-    gamma:         float = 0.99
     gae_lambda:    float = 0.95
+    gamma:         float = 0.99
     total_timesteps: int = 25_000
     n_steps:         int = 128
     batch_size:      int = 512 # n_envs * num_steps. Will be initialized at 'parse_args_config'
