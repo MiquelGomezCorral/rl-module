@@ -43,6 +43,7 @@ def create_env(CONFIG: Configuration, idx: int) -> gym.Env:
         render_mode = "rgb_array" if CONFIG.record_video else None
     )
     env = gym.wrappers.RecordEpisodeStatistics(env)
+    
     if CONFIG.record_video and idx < 4: # capture only the first 4 videos
         env = gym.wrappers.RecordVideo(
             env, 
