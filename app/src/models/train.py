@@ -193,7 +193,7 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
                 nn.utils.clip_grad_norm_(agent.parameters(), CONFIG.max_grad_norm)
                 optimizer.step()
             # END FOR START
-
+            # Early stop batch level
             if CONFIG.target_kl is not None and approx_kl > CONFIG.target_kl:
                 break
         # END FOR 
@@ -203,7 +203,20 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
         var_y = np.var(y_true)
         explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
             
+         # TRY NOT TO MODIFY: record rewards for plotting purposes
+        writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
+        writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
+        writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
+        writer.add_scalar("losses/entropy", entropy_loss.item(), global_step)
+        writer.add_scalar("losses/old_approx_kl", old_approx_kl.item(), global_step)
+        writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
+        writer.add_scalar("losses/clipfrac", np.mean([cf.cpu().item() for cf in clip_fracs]), global_step)
+        writer.add_scalar("losses/explained_variance", explained_var, global_step)
+        print("SPS:", int(global_step / (time.time() - start_time)))
+        writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
+    envs.close()
+    writer.close()
 
 
     end_time = time.time()
