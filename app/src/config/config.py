@@ -9,7 +9,7 @@ from argparse import Namespace
 class Configuration:
     # ================== Paths ==================
     TEMP:   str = "temp"
-    VIDEOS: str = "videos"
+    VIDEOS: str = "../videos"
 
     runs_path:   str = os.path.join(TEMP, "runs")
     wandb_path:  str = os.path.join(TEMP, "wandb")
