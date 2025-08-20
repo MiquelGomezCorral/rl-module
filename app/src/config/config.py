@@ -34,6 +34,13 @@ class Configuration:
     n_mini_batches:  int = 4   
     mini_batch_size: int = 128 # batch_size / n_mini_batches. Will be initialized at 'parse_args_config'
     update_epochs:   int = 4
+    norm_adv:        bool = True
+    clip_coef:      float = 0.2
+    clip_vloss:      bool = True
+    entropy_coef:   float = 0.01
+    vf_coef:        float = 0.5
+    max_grad_norm:  float = 0.5
+    target_kl:      float = 0.015
 
     torch_deterministic: bool = True
     cuda:                bool = True

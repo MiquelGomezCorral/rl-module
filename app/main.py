@@ -56,11 +56,11 @@ def parse_args_config():
     )
     parser.add_argument(
         "-alr", "--anneal_lr", action='store_false', default=True,
-        help="Toggle leaning rate annealing for policy and value networks"
+        help="Toggle leaning rate annealing for policy and value networks. (-alr store false)"
     )
     parser.add_argument(
         "-gae", "--gae", action='store_false', default=True,
-        help="Toggle use of General Advantage Estimator (GAE) for advantage computation"
+        help="Toggle use of General Advantage Estimator (GAE) for advantage computation. (-gae store false)"
     )
     parser.add_argument(
         "-g", "--gamma", type=float, default=0.99,
@@ -81,6 +81,34 @@ def parse_args_config():
     parser.add_argument(
         "-ue", "--update_epochs", type=int, default=4,
         help="The K epochs to update the policy."
+    )
+    parser.add_argument(
+        "-na", "--norm_adv", action="store_false", default=True,
+        help="Toggle advantages normalization (-na store false)."
+    )
+    parser.add_argument(
+        "-cc", "--clip_coef", type=float, default=0.2,
+        help="The surrogate clipping coefficient"
+    )
+    parser.add_argument(
+        "-cv", "--clip_vloss", action="store_false", default=True,
+        help="Toggle whether or not to use a clipped loss for the value function. (na store false)."
+    )
+    parser.add_argument(
+        "-ec", "--entropy_coef", type=float, default=0.01,
+        help="Coefficient of the entropy."
+    )
+    parser.add_argument(
+        "-vc", "--vf_coef", type=float, default=0.5,
+        help="Coefficient of the value function."
+    )
+    parser.add_argument(
+        "-mgn", "--max_grad_norm", type=float, default=0.5,
+        help="The maximum norm for the gradient clipping."
+    )
+    parser.add_argument(
+        "-tkl", "--target_kl", type=float, default=0.015,
+        help="The target KL divergence threshold."
     )
 
     # ===================== GPU =====================
