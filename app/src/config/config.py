@@ -18,6 +18,7 @@ class Configuration:
     exp_name:      str = "base_name"
     seed:          int = 42
     record_video: bool = False
+    remove_old_video: bool = False
     fps:           int = 30
 
     gym_id:          str = "CartPole-v1"
@@ -25,7 +26,7 @@ class Configuration:
     eps:           float = 1e-5 # DO NOT TOUCH! is for the alogrithm, is not even in the args ;)
     learning_rate: float = 2.5e-4
     anneal_lr:      bool = True
-    gae:     bool = True
+    gae:            bool = True
     gamma:         float = 0.99
     gae_lambda:    float = 0.95
     total_timesteps: int = 25_000

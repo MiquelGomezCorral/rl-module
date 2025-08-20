@@ -9,6 +9,7 @@ from src.models import train_ppo
 from src.utils import set_seed, get_device
 from src.config import Configuration, args_to_config
 
+from maikol_utils.file_utils import clear_directories
 
 
 def main(CONFIG: Configuration, writer: SummaryWriter):
@@ -34,6 +35,10 @@ def parse_args_config():
     parser.add_argument(
         "-v", "--record_video", action='store_true', default=False,
         help="if toggled (-v), videos of the execution of the model will be recorded and saved."
+    )
+    parser.add_argument(
+        "-rv", "--remove_old_video", action='store_true', default=False,
+        help="if toggled (-rv), videos of the execution of the model will be recorded and saved."
     )
     
 
@@ -145,6 +150,9 @@ def parse_args_config():
 
 if __name__ == "__main__":
     CONFIG = parse_args_config()
+
+    if CONFIG.remove_old_video and CONFIG.record_video:
+        clear_directories(CONFIG.VIDEOS)
 
     # ===================== WANDB =====================
     run_name = f"{CONFIG.gym_id}__{CONFIG.exp_name}__{CONFIG.seed}__{int(time.time())}"
