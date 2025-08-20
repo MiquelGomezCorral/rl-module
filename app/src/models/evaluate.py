@@ -1,13 +1,14 @@
-import time
 import torch
 import numpy as np
 from tqdm import tqdm
+from time import time
 
 from maikol_utils.print_utils import print_separator
 from maikol_utils.time_tracker import print_time
 
 from src.config import Configuration
-from src.models import AgentAC, get_envs
+from src.models.agent import AgentAC
+from src.models.env_management import get_envs
 
 
 def evaluate_agent(agent: AgentAC, CONFIG: Configuration) -> tuple[float, float]:
@@ -38,7 +39,7 @@ def evaluate_agent(agent: AgentAC, CONFIG: Configuration) -> tuple[float, float]
     episode_rewards = []
     states = torch.Tensor(envs.reset()[0]).to(CONFIG.device)
     dones = torch.zeros(CONFIG.n_envs, dtype=bool)
-    start_time = time.time()
+    start_time = time()
 
     # ================================================================
     #                       EVALUATING LOOP
@@ -75,6 +76,6 @@ def evaluate_agent(agent: AgentAC, CONFIG: Configuration) -> tuple[float, float]
         std_reward  = float(np.std(per_env_returns))
 
     print(f" - Mean rewards: {mean_reward:.4f}+-{std_reward:.4f}")
-    print_time(time.time() - start_time, prefix=" - ")
+    print_time(time() - start_time, prefix=" - ")
 
     return mean_reward, std_reward

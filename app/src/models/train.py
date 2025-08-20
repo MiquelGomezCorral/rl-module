@@ -13,7 +13,7 @@ from torch.utils.tensorboard import SummaryWriter
 from src.config import Configuration
 from src.models.agent import AgentAC # separated because they are in the same module 
 from src.models.env_management import get_envs
-from src.utils import save_model
+from src.utils import save_agent
 
 
 def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
@@ -229,7 +229,7 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
     writer.close()
 
     print_separator("RESUME", sep_type="LONG")
-    save_model(agent, CONFIG)
+    save_agent(CONFIG, agent)
     tot_time = time.time() - start_time
     print(f" - Total seconds: {tot_time}")
     print_time(tot_time, prefix=" - ")
