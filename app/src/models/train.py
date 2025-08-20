@@ -1,6 +1,9 @@
 import time
 import numpy as np
-import gymnasium as gym
+from tqdm import tqdm
+
+from maikol_utils.print_utils import print_separator
+from maikol_utils.time_tracker import print_time
 
 import torch
 import torch.nn as nn
@@ -18,24 +21,26 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
     Args:
         CONFIG (Configuration): Configuration for the training
     """
+    print_separator(f"TRAINING PPO '{CONFIG.exp_name}'", sep_type="START")
+    print_separator("CONFIGURATION", sep_type="LONG")
     # ======================================================
     #                   ENV MANAGEMENT
     # ======================================================
+    print(f" - Creating envs...")
     # envs = create_env(CONFIG)
     envs = get_envs(CONFIG)
     # ======================================================
     #                   AGENT & VARS
     # ======================================================
+    print(f" - Creating agent...")
     # ================== AGENT ==================
     agent = AgentAC(envs).to(CONFIG.device)
     optimizer = optim.Adam(agent.parameters(), lr=CONFIG.learning_rate, eps=CONFIG.eps)
 
-    print(f"Observation dimension: {agent.obs_dim}. Action dimensions: {agent.action_dim}")
+    print(f"   - Observation dimension: {agent.obs_dim}. Action dimensions: {agent.action_dim}")
     # ================== VARS ==================
     # Store setup
     obs      = torch.zeros((CONFIG.n_steps, CONFIG.n_envs) + (agent.obs_dim,)   ).to(CONFIG.device)
-    """"""
-    # actions  = torch.zeros((CONFIG.n_steps, CONFIG.n_envs) + (agent.action_dim,)).to(CONFIG.device)
     actions  = torch.zeros((CONFIG.n_steps, CONFIG.n_envs)).to(CONFIG.device)
     logprobs = torch.zeros((CONFIG.n_steps, CONFIG.n_envs)).to(CONFIG.device)
     rewards  = torch.zeros((CONFIG.n_steps, CONFIG.n_envs)).to(CONFIG.device)
@@ -43,20 +48,18 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
     values   = torch.zeros((CONFIG.n_steps, CONFIG.n_envs)).to(CONFIG.device)
 
     # ================== OTHERS ==================
+    print(f" - Others...")
     global_step = 0
     start_time  = time.time()
-    """"""
-    # next_obs    = torch.Tensor(envs.reset()).to(CONFIG.device)
     next_obs    = torch.Tensor(envs.reset()[0]).to(CONFIG.device)
     next_done   = torch.zeros(CONFIG.n_envs).to(CONFIG.device)
     num_updates = CONFIG.total_timesteps // CONFIG.batch_size
 
     # ================== TRAINING LOOP ==================
-    # print(agent.get_value(next_obs))
-    # print(agent.get_action_value(next_obs))
-
+    print_separator("TRAINING", sep_type="SUPER")
+    print(f" - Training for {CONFIG.total_timesteps} time steps and {CONFIG.batch_size} as batch size. {update} updates in total.")
     # Episodes?
-    for update in range(1, num_updates + 1):
+    for update in tqdm(range(1, num_updates + 1)):
         # 1. Annealing the rate if config says so.
         if CONFIG.anneal_lr:
             frac = 1.0 - (update - 1.0) / num_updates # 1 beginning decreases -> 0
@@ -84,15 +87,12 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
             next_obs      = torch.Tensor(next_obs).to(CONFIG.device)
             next_done     = torch.Tensor(term | trunc).to(CONFIG.device)
 
-            # if global_step % 1_000 == 0:
-            #     for k, v in info.items():
-            #         if k != "episode": continue
-            #         print(f"{global_step = } | {step = }")
-            #         print(f" - episodic return {v['r']} | mean {v['r'].mean().item(): .2f}")
-            #         print(f" - episodic length {v['l']} | mean {v['l'].mean().item(): .2f}")
-            #         writer.add_scalar("charts/episodic_return", v['r'].mean().item(), global_step)
-            #         writer.add_scalar("charts/episodic_length", v['l'].mean().item(), global_step)
-            #         break
+            if global_step % 1_000 == 0:
+                for k, v in info.items():
+                    if k != "episode": continue
+                    writer.add_scalar("charts/episodic_return", v['r'].mean().item(), global_step)
+                    writer.add_scalar("charts/episodic_length", v['l'].mean().item(), global_step)
+                    break
 
         # 3. Bootstrap reward if not done (GAE thing)
         with torch.no_grad():
@@ -207,7 +207,7 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
         var_y = np.var(y_true)
         explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
             
-         # TRY NOT TO MODIFY: record rewards for plotting purposes
+        # TRY NOT TO MODIFY: record rewards for plotting purposes
         writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
         writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
         writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
@@ -216,16 +216,18 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
         writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
         writer.add_scalar("losses/clipfrac", np.mean([cf.cpu().item() for cf in clip_fracs]), global_step)
         writer.add_scalar("losses/explained_variance", explained_var, global_step)
-        sps = int(global_step / (time.time() - start_time))
-        writer.add_scalar("charts/SPS", sps, global_step)
-        print("SPS:", sps)
+        writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
+    # END FOR UPDATES
 
+    # 7 DONE
     envs.close()
     writer.close()
 
-
+    print_separator("TRAINING RESUME", sep_type="LONG")
     end_time = time.time()
-    print(f"Total time {end_time - start_time:.4f}s")
+    print_time(end_time - start_time)
+    
+    print_separator("DONE!", sep_type="START")
 
 
 def evaluate_model(model, CONIFG: Configuration): 
