@@ -9,6 +9,7 @@ from argparse import Namespace
 class Configuration:
     # ================== Variables ==================
     exp_name:      str = "base_name"
+    model_version: int = None
     seed:          int = 42
     record_video: bool = False
     remove_old_video: bool = False
