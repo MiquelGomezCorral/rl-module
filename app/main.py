@@ -65,7 +65,7 @@ def ppo_eval(args: argparse.Namespace):
 
 def parse_args_config():
     parser = argparse.ArgumentParser(
-        prog="PPO Implementation following HF RL and https://www.youtube.com/watch?v=MEt6rrxH8W4&ab_channel=Weights%26Biases tutorial",
+        prog="PPO Implementation following HF RL Course and https://www.youtube.com/watch?v=MEt6rrxH8W4&ab_channel=Weights%26Biases tutorial",
         description="PPO implementation with customizable parameters for it's use"
     )
     subparsers = parser.add_subparsers(dest="function", required=True)

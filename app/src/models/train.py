@@ -231,7 +231,6 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
     print_separator("RESUME", sep_type="LONG")
     save_agent(CONFIG, agent)
     tot_time = time.time() - start_time
-    print(f" - Total seconds: {tot_time}")
     print_time(tot_time, prefix=" - ")
 
 

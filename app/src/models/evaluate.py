@@ -47,7 +47,7 @@ def evaluate_agent(agent: AgentAC, CONFIG: Configuration) -> tuple[float, float]
     print_separator("EVALUATING", sep_type="SUPER")
     print(f" - Evaluating for {CONFIG.n_eval_episodes}.")
 
-    for episodes in tqdm(range(1, CONFIG.n_eval_episodes + 1)):
+    for episode in tqdm(range(1, CONFIG.n_eval_episodes + 1)):
         with torch.no_grad():
             actions, _, _, _ = agent.get_action_value(states)
 
