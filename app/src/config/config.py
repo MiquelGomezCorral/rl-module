@@ -7,13 +7,6 @@ from argparse import Namespace
 
 @dataclass 
 class Configuration:
-    # ================== Paths ==================
-    TEMP:   str = "../temp"
-    VIDEOS: str = "../videos"
-
-    runs_path:   str = os.path.join(TEMP, "runs")
-    wandb_path:  str = os.path.join(TEMP, "wandb")
-
     # ================== Variables ==================
     exp_name:      str = "base_name"
     seed:          int = 42
@@ -51,6 +44,16 @@ class Configuration:
     wandb_project_name: str = "RL"
     wandb_entity:       str = None
 
+    # ================== Paths ==================
+    TEMP:   str = "../temp"
+    VIDEOS: str = "../videos"
+
+    runs_path:   str = os.path.join(TEMP, "runs")
+    wandb_path:  str = os.path.join(TEMP, "wandb")
+    videos_path:  str = os.path.join(VIDEOS, exp_name)
+
+    def __post_init__(self):
+        self.videos_path = os.path.join(self.VIDEOS,  self.exp_name)
 
 def args_to_config(args: Namespace) -> Configuration:
     """Creates a configuration object from the args parser

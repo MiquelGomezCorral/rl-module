@@ -198,6 +198,7 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
             # END FOR START
             # Early stop batch level
             if CONFIG.target_kl is not None and approx_kl > CONFIG.target_kl:
+                print("EARLY STOPPING")
                 break
         # END FOR 
         
@@ -215,8 +216,9 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
         writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
         writer.add_scalar("losses/clipfrac", np.mean([cf.cpu().item() for cf in clip_fracs]), global_step)
         writer.add_scalar("losses/explained_variance", explained_var, global_step)
-        print("SPS:", int(global_step / (time.time() - start_time)))
-        writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
+        sps = int(global_step / (time.time() - start_time))
+        writer.add_scalar("charts/SPS", sps, global_step)
+        print("SPS:", sps)
 
     envs.close()
     writer.close()

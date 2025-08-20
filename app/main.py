@@ -72,7 +72,7 @@ def parse_args_config():
         help="The discount factor gamma"
     )
     parser.add_argument(
-        "-ts", "--total_timesteps", type=int, default=25_000,
+        "-ts", "--total_timesteps", type=int, default=50_000,
         help="Total timesteps of the experiments"
     )
     parser.add_argument(
@@ -153,6 +153,8 @@ if __name__ == "__main__":
 
     if CONFIG.remove_old_video and CONFIG.record_video:
         clear_directories(CONFIG.VIDEOS)
+        
+    os.makedirs(CONFIG.videos_path, exist_ok=True)
 
     # ===================== WANDB =====================
     run_name = f"{CONFIG.gym_id}__{CONFIG.exp_name}__{CONFIG.seed}__{int(time.time())}"
