@@ -30,7 +30,7 @@ def evaluate_agent(agent: AgentAC, CONFIG: Configuration) -> tuple[float, float]
     #                       ENV MANAGEMENT
     # ================================================================
     print(f" - Creating envs...")
-    envs = get_envs(CONFIG)
+    envs = get_envs(CONFIG, evaluating=True)
 
     # ================================================================
     #                               VARS

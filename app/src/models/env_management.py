@@ -16,7 +16,7 @@ def get_shape_from_envs(envs: gym.Env) -> tuple:
     """
     return envs.single_observation_space.shape, envs.single_action_space.n
 
-def get_envs(CONFIG: Configuration) -> gym.vector.SyncVectorEnv:
+def get_envs(CONFIG: Configuration, evaluating: bool = False) -> gym.vector.SyncVectorEnv:
     """
     Create and return a vectorized environment for training.
 
@@ -34,7 +34,7 @@ def get_envs(CONFIG: Configuration) -> gym.vector.SyncVectorEnv:
     """
 
     envs =  gym.vector.SyncVectorEnv([
-        get_env_trunk(CONFIG, idx)
+        get_env_trunk(CONFIG, idx, evaluating)
         for idx in range(CONFIG.n_envs)
     ])
     assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete actions space is supported"
@@ -42,7 +42,7 @@ def get_envs(CONFIG: Configuration) -> gym.vector.SyncVectorEnv:
     return envs
 
 
-def create_env(CONFIG: Configuration, idx: int) -> gym.Env:
+def create_env(CONFIG: Configuration, idx: int, evaluating: bool = False) -> gym.Env:
     """Create an environment from configuration
 
     Args:
@@ -57,11 +57,12 @@ def create_env(CONFIG: Configuration, idx: int) -> gym.Env:
     )
     env = gym.wrappers.RecordEpisodeStatistics(env)
     
-    if CONFIG.record_video and idx < 4: # capture only the first 4 videos
+    if CONFIG.record_video and (evaluating or idx == 0): # capture only the first 4 videos
         env = gym.wrappers.RecordVideo(
             env, 
             video_folder=CONFIG.videos_path, 
             fps=CONFIG.fps,
+            name_prefix=f"env{idx}"
         )
 
     # NOTE: This seeds are different from the code seeds and are different for different envs
@@ -71,7 +72,7 @@ def create_env(CONFIG: Configuration, idx: int) -> gym.Env:
 
     return env
 
-def get_env_trunk(CONFIG: Configuration, idx: int) -> callable:
+def get_env_trunk(CONFIG: Configuration, idx: int, evaluating: bool = False) -> callable:
     """Given a configuration reuturns a functions that can
     create environments?
 
@@ -81,4 +82,4 @@ def get_env_trunk(CONFIG: Configuration, idx: int) -> callable:
     Returns:
         callable: Function that creates envs
     """
-    return lambda: create_env(CONFIG, idx)
+    return lambda: create_env(CONFIG, idx, evaluating)
