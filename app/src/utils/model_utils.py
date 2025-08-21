@@ -1,5 +1,6 @@
 import os
 import torch
+from typing import Any
 
 from src.models.agent import AgentAC
 from src.models.env_management import get_envs, get_shape_from_envs
@@ -80,9 +81,21 @@ def load_agent(CONFIG: Configuration, agent: AgentAC = None) -> AgentAC:
 def save_checkpoint(
     CONFIG: Configuration, 
     agent: AgentAC, 
-    optimizer, 
-    update, 
+    optimizer: Any, 
+    update: int, 
 ):
+    """Save a checkpoint in a rotatory way.
+    
+    Keep the last CONFIG.keep_last_k. If all filled:
+    rotate: v(k-1) → v(k-2), ..., v1→v0, drop v0.
+    Last is always k-1
+
+    Args:
+        CONFIG (Configuration): Configuration
+        agent (AgentAC): Agent class
+        optimizer (Any): Optimizer
+        update (int): Update step
+    """
     # rotate: v(k-1) → v(k-2), ..., v1→v0, drop v0
     for v in range(1, CONFIG.keep_last_k):
         src = os.path.join(CONFIG.checkpoint_path, f"{CONFIG.exp_name}-v{v}.pt")
@@ -103,8 +116,18 @@ def save_checkpoint(
 def load_checkpoint(
     CONFIG: Configuration, 
     agent: AgentAC, 
-    optimizer
-):
+    optimizer: Any
+) -> int:
+    """Load the last checkpoint agent
+
+    Args:
+        CONFIG (Configuration): Configuration
+        agent (AgentAC): Agent class
+        optimizer (Any): Optimizer
+
+    Returns:
+        int: Update step in which the trainnig process was was.
+    """
     checkpoints, n_files = list_dir_files(CONFIG.checkpoint_path)
     # From the model path, get the name (no extension), split by version and keep the number
     if n_files == 0:
