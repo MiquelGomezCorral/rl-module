@@ -127,15 +127,15 @@ def parse_args_config():
         help="Toggle use of General Advantage Estimator (GAE) for advantage computation. (-gae store false)"
     )
     p_ppo_train.add_argument(
-        "-gae_l", "--gae_lambda", type=float, default=0.95,
+        "-gae_l", "--gae_lambda", type=float, default=0.98,
         help="The lambda for the general advantage estimator"
     )
     p_ppo_train.add_argument(
-        "-g", "--gamma", type=float, default=0.99,
+        "-g", "--gamma", type=float, default=0.999,
         help="The discount factor gamma"
     )
     p_ppo_train.add_argument(
-        "-ts", "--total_timesteps", type=int, default=50_000,
+        "-ts", "--total_timesteps", type=int, default=1_000_000,
         help="Total timesteps of the experiments"
     )
     p_ppo_train.add_argument(

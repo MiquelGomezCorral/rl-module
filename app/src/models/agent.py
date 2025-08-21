@@ -7,58 +7,43 @@ from torch.distributions.categorical import Categorical
 
 
 class AgentAC(nn.Module):
-    def __init__(self, state_space: tuple, action_space: int):
+    def __init__(
+        self, state_space: tuple, action_space: int,
+        hidden_actor: list[int] = [64, 128, 256, 256, 256, 128, 64],
+        hidden_critic: list[int] = [64, 128, 256, 256, 256, 128, 64]
+    ):
         super(AgentAC, self).__init__()
         self.state_dim = np.array(state_space).prod() # input state
         self.action_dim = action_space                # output action
 
-        # self.critic = nn.Sequential(
-        #     layer_init(nn.Linear(self.state_dim, 64)),
-        #     nn.Tanh(),
-        #     layer_init(nn.Linear(64,64)),
-        #     nn.Tanh(),
-        #     layer_init(nn.Linear(64,128)),
-        #     nn.Tanh(),
-        #     layer_init(nn.Linear(128,128)),
-        #     nn.Tanh(),
-        #     layer_init(nn.Linear(128,128)),
-        #     nn.Tanh(),
-        #     layer_init(nn.Linear(128,64)),
-        #     nn.Tanh(),
-        #     layer_init(nn.Linear(64,1), std=1.0) #std 1 for some reason
-        # )
-        self.critic = nn.Sequential(
-            layer_init(nn.Linear(self.state_dim, 64)),
-            nn.Tanh(),
-            layer_init(nn.Linear(64,64)),
-            nn.Tanh(),
-            layer_init(nn.Linear(64,1), std=1.0) #std 1 for some reason
-        )
+        self.hidden_actor = hidden_actor   # output action
+        self.hidden_critic = hidden_critic # output action
 
-        # self.actor = nn.Sequential(
-        #     layer_init(nn.Linear(self.state_dim, 64)),
-        #     nn.Tanh(),
-        #     layer_init(nn.Linear(64,64)),
-        #     nn.Tanh(),
-        #     layer_init(nn.Linear(64,128)),
-        #     nn.Tanh(),
-        #     layer_init(nn.Linear(128,128)),
-        #     nn.Tanh(),
-        #     layer_init(nn.Linear(128,128)),
-        #     nn.Tanh(),
-        #     layer_init(nn.Linear(128,64)),
-        #     nn.Tanh(),
-        #     # std small so initially all the parameters have similar probabilities of being chosen
-        #     layer_init(nn.Linear(64, self.action_dim), std=0.01) 
-        # )
-        self.actor = nn.Sequential(
-            layer_init(nn.Linear(self.state_dim, 64)),
-            nn.Tanh(),
-            layer_init(nn.Linear(64,64)),
-            nn.Tanh(),
-            # std small so initially all the parameters have similar probabilities of being chosen
-            layer_init(nn.Linear(64, self.action_dim), std=0.01) 
-        )
+        self.critic = self._build_mlp(self.state_dim, 1, hidden_critic, out_std=1.0)
+        self.actor = self._build_mlp(self.state_dim, self.action_dim, hidden_actor, out_std=0.01)
+
+
+    def _build_mlp(self, in_dim: int, out_dim: int, hidden_sizes: list[int], out_std: float):
+        """Builds the sequential layers for a submodel
+
+        Args:
+            in_dim (int): In dimension.
+            out_dim (int): Out dimension.
+            hidden_sizes (list[int]): Size of the inner layers
+            out_std (float): last layer std
+
+        Returns:
+            nn.Sequential: The sencuantialized layers.
+        """
+        layers = []
+        # In size for in layer
+        prev = in_dim
+        for h in hidden_sizes:
+            layers += [layer_init(nn.Linear(prev, h)), nn.Tanh()]
+            prev = h
+        # Out size for out layer
+        layers.append(layer_init(nn.Linear(prev, out_dim), std=out_std))
+        return nn.Sequential(*layers)
 
     def get_value(self, state: np.ndarray):
         """Get the critic value for state 
