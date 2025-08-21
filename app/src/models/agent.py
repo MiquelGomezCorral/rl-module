@@ -9,13 +9,21 @@ from torch.distributions.categorical import Categorical
 class AgentAC(nn.Module):
     def __init__(self, envs):
         super(AgentAC, self).__init__()
-        self.state_dim = np.array(envs.single_observation_space.shape).prod() # intup state
+        self.state_dim = np.array(envs.single_observation_space.shape).prod() # input state
         self.action_dim = envs.single_action_space.n                       # output action
 
         self.critic = nn.Sequential(
             layer_init(nn.Linear(self.state_dim, 64)),
             nn.Tanh(),
             layer_init(nn.Linear(64,64)),
+            nn.Tanh(),
+            layer_init(nn.Linear(64,128)),
+            nn.Tanh(),
+            layer_init(nn.Linear(128,128)),
+            nn.Tanh(),
+            layer_init(nn.Linear(128,128)),
+            nn.Tanh(),
+            layer_init(nn.Linear(128,64)),
             nn.Tanh(),
             layer_init(nn.Linear(64,1), std=1.0) #std 1 for some reason
         )
@@ -24,6 +32,14 @@ class AgentAC(nn.Module):
             layer_init(nn.Linear(self.state_dim, 64)),
             nn.Tanh(),
             layer_init(nn.Linear(64,64)),
+            nn.Tanh(),
+            layer_init(nn.Linear(64,128)),
+            nn.Tanh(),
+            layer_init(nn.Linear(128,128)),
+            nn.Tanh(),
+            layer_init(nn.Linear(128,128)),
+            nn.Tanh(),
+            layer_init(nn.Linear(128,64)),
             nn.Tanh(),
             # std small so initially all the parameters have similar probabilities of being chosen
             layer_init(nn.Linear(64, self.action_dim), std=0.01) 

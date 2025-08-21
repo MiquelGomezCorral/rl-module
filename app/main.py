@@ -104,7 +104,7 @@ def parse_args_config():
     )
     
     p_ppo_train.add_argument(
-        "-lr", "--learning_rate", type=float, default=2.5e-4,
+        "-lr", "--learning_rate", type=float, default=1e-4,
         help="The leraning rate of the optimizer"
     )
     p_ppo_train.add_argument(
@@ -128,15 +128,15 @@ def parse_args_config():
         help="Total timesteps of the experiments"
     )
     p_ppo_train.add_argument(
-        "-ns", "--n_steps", type=int, default=128,
+        "-ns", "--n_steps", type=int, default=1024,
         help="The number of steps to run in each environment per polcy rollout."
     )
     p_ppo_train.add_argument(
-        "-b", "--n_mini_batches", type=int, default=4,
+        "-b", "--n_mini_batches", type=int, default=16,
         help="The number mini batches."
     )
     p_ppo_train.add_argument(
-        "-ue", "--update_epochs", type=int, default=4,
+        "-ue", "--update_epochs", type=int, default=16,
         help="The K epochs to update the policy."
     )
     p_ppo_train.add_argument(
@@ -203,6 +203,12 @@ def parse_args_config():
         "-exp", "--exp_name", type=str, default=os.path.basename(__file__).rstrip(".py"),
         help="The name of the experiment."
     )
+
+    p_ppo_eval.add_argument(
+        "-id", "--gym_id", type=str, default="CartPole-v1",
+        help="The id of the gym environment"
+    )
+
     p_ppo_eval.add_argument(
         "-ne", "--n_envs", type=int, default=4,
         help="Total number of sub envs for the experiment"
