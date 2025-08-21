@@ -61,7 +61,7 @@ def create_env(CONFIG: Configuration, idx: int) -> gym.Env:
         env = gym.wrappers.RecordVideo(
             env, 
             video_folder=CONFIG.videos_path, 
-            fps=CONFIG.fps
+            fps=CONFIG.fps,
         )
 
     # NOTE: This seeds are different from the code seeds and are different for different envs

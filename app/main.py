@@ -208,6 +208,15 @@ def parse_args_config():
         "-id", "--gym_id", type=str, default="CartPole-v1",
         help="The id of the gym environment"
     )
+    p_ppo_eval.add_argument(
+        "-v", "--record_video", action='store_true', default=False,
+        help="if toggled (-v), videos of the execution of the model will be recorded and saved."
+    )
+    p_ppo_eval.add_argument(
+        "-rv", "--remove_old_video", action='store_true', default=False,
+        help="if toggled (-rv), videos of the execution of the model will be recorded and saved."
+    )
+    
 
     p_ppo_eval.add_argument(
         "-ne", "--n_envs", type=int, default=4,

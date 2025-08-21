@@ -52,7 +52,7 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
     print(f" - Others...")
     global_step = 0
     start_time  = time.time()
-    next_states    = torch.Tensor(envs.reset()[0]).to(CONFIG.device)
+    next_states = torch.Tensor(envs.reset()[0]).to(CONFIG.device)
     next_done   = torch.zeros(CONFIG.n_envs).to(CONFIG.device)
     num_updates = CONFIG.total_timesteps // CONFIG.batch_size
 
