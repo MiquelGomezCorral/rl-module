@@ -3,6 +3,19 @@ import gymnasium as gym
 from src.config import Configuration
 
 
+def get_shape_from_envs(envs: gym.Env) -> tuple:
+    """Given the vectorized envs object, return the shape
+
+    Args:
+        envs (gym.Env): Vectorized envs
+
+    Returns:
+        tuple: 
+            - State shape
+            - Actions shape
+    """
+    return envs.single_observation_space.shape, envs.single_action_space.n
+
 def get_envs(CONFIG: Configuration) -> gym.vector.SyncVectorEnv:
     """
     Create and return a vectorized environment for training.

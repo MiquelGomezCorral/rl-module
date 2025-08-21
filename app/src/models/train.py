@@ -12,7 +12,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from src.config import Configuration
 from src.models.agent import AgentAC # separated because they are in the same module 
-from src.models.env_management import get_envs
+from src.models.env_management import get_envs, get_shape_from_envs
 from src.utils import save_agent
 
 
@@ -35,7 +35,7 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
     # ================================================================
     print(f" - Creating agent and vars...")
     # ================== AGENT ==================
-    agent = AgentAC(envs).to(CONFIG.device)
+    agent = AgentAC(*get_shape_from_envs(envs)).to(CONFIG.device)
     optimizer = optim.Adam(agent.parameters(), lr=CONFIG.learning_rate, eps=CONFIG.eps)
 
     print(f"   - Observation dimension: {agent.state_dim}. Action dimensions: {agent.action_dim}")

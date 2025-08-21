@@ -7,7 +7,7 @@ from dataclasses import asdict
 from torch.utils.tensorboard import SummaryWriter
 
 from src.models.agent import AgentAC
-from src.models.env_management import get_envs
+from src.models.env_management import get_envs, get_shape_from_envs
 from src.config import Configuration
 
 from maikol_utils.file_utils import list_dir_files
@@ -82,7 +82,7 @@ def load_agent(CONFIG: Configuration, agent: AgentAC = None) -> AgentAC:
     """
     if agent is None:
         envs = get_envs(CONFIG)
-        agent = AgentAC(envs)
+        agent = AgentAC(*get_shape_from_envs(envs))
 
     if CONFIG.model_version is None:
         trained_agents, _ = list_dir_files(CONFIG.models_path)
