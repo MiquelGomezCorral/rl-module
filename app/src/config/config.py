@@ -8,11 +8,12 @@ from argparse import Namespace
 @dataclass 
 class Configuration:
     # ================== Variables ==================
-    exp_name:      str = "base_name"
-    model_version: int = None
+    exp_name:        str = "base_name"
+    model_version:   int = None
     use_checkpoint: bool = False
-    seed:          int = 42
-    record_video: bool = False
+    keep_last_k:     int = 2
+    seed:            int = 42
+    record_video:   bool = False
     remove_old_video: bool = False
     fps:             int = 30
     n_eval_episodes: int = 25

@@ -92,6 +92,11 @@ def parse_args_config():
         "-ch", "--use_checkpoint", action='store_true', default=False,
         help="if toggled (-ch), try to resume the training from a saved checkpoint."
     )
+    p_ppo_train.add_argument(
+        "-lk", "--keep_last_k", type=int, default=2,
+        help="When saving checkpoints, keep the last k agents."
+    )
+     
 
     p_ppo_train.add_argument(
         "-v", "--record_video", action='store_true', default=False,

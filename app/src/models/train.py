@@ -43,7 +43,7 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
     if CONFIG.use_checkpoint:
         start_update = load_checkpoint(CONFIG, agent, optimizer) 
 
-    print(f"   - Observation dimension: {agent.state_dim}. Action dimensions: {agent.action_dim}")
+    print(f" - Observation dimension: {agent.state_dim}. Action dimensions: {agent.action_dim}")
     # ================== VARS ==================
     # Store setup
     states      = torch.zeros((CONFIG.n_steps, CONFIG.n_envs) + (agent.state_dim,)).to(CONFIG.device)
@@ -54,7 +54,6 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
     values   = torch.zeros((CONFIG.n_steps, CONFIG.n_envs)).to(CONFIG.device)
 
     # ================== OTHERS ==================
-    print(f" - Others...")
     global_step = 0
     start_time  = time.time()
     next_states = torch.Tensor(envs.reset()[0]).to(CONFIG.device)

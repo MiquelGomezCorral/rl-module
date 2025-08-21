@@ -83,14 +83,15 @@ def save_checkpoint(
     optimizer, 
     update, 
 ):
-    version = 0
-    checkpoint_path = os.path.join(CONFIG.checkpoint_path, f"{CONFIG.exp_name}-v{version}.pt")
-    while os.path.exists(checkpoint_path):
-        version += 1
-        checkpoint_path = os.path.join(CONFIG.checkpoint_path, f"{CONFIG.exp_name}-v{version}.pt")
-    
-    make_dirs(CONFIG.checkpoint_path)
+    # rotate: v(k-1) → v(k-2), ..., v1→v0, drop v0
+    for v in range(1, CONFIG.keep_last_k):
+        src = os.path.join(CONFIG.checkpoint_path, f"{CONFIG.exp_name}-v{v}.pt")
+        dst = os.path.join(CONFIG.checkpoint_path, f"{CONFIG.exp_name}-v{v-1}.pt")
+        if os.path.exists(src):
+            os.replace(src, dst)
 
+    checkpoint_path = os.path.join(CONFIG.checkpoint_path, f"{CONFIG.exp_name}-v{CONFIG.keep_last_k-1}.pt")
+    
     torch.save({
         "agent_state_dict": agent.state_dict(),
         "optimizer_state_dict": optimizer.state_dict(),
