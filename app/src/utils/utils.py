@@ -11,10 +11,10 @@ from src.models.env_management import get_envs, get_shape_from_envs
 from src.config import Configuration
 
 from maikol_utils.file_utils import list_dir_files
+
 # =================================================================================
 #                                    GENERAL
 # =================================================================================
-
 def set_seed(seed: int, torch_deterministic: bool = None):
     """Set the seed for all modules
 
@@ -40,67 +40,6 @@ def get_device(CONFIG: Configuration) -> torch.device:
         torch.device: Selected device
     """
     return torch.device("cuda" if torch.cuda.is_available() and CONFIG.cuda else "cpu")
-
-# =================================================================================
-#                                    MODEL
-# =================================================================================
-def save_agent(CONFIG: Configuration, agent: AgentAC) -> None:
-    """Saves the agent in memory.
-
-    It assigns it a version. If the version is already created check for
-    higher version values
-
-    Args:
-        agent (AgentAC): Trained  agent
-        CONFIG (Configuration): Configuration
-    """
-    version = 0
-    model_path = os.path.join(CONFIG.models_path, f"{CONFIG.exp_name}-v{version}.pt")
-    while os.path.exists(model_path):
-        version += 1
-        model_path = os.path.join(CONFIG.models_path, f"{CONFIG.exp_name}-v{version}.pt")
-    
-    os.makedirs(CONFIG.models_path, exist_ok=True)
-    torch.save(agent.state_dict(), model_path)
-    print(f" - Model saved to {model_path}")
-    
-
-def load_agent(CONFIG: Configuration, agent: AgentAC = None) -> AgentAC:
-    """Load and agent from memory.
-
-    If config has no version specified, it will look for the newest.
-
-    Args:
-        CONFIG (Configuration): Configuration
-        agent (AgentAC, optional): Already created model with envs. Defaults to None.
-
-    Raises:
-        RuntimeError: Failed to load state_dic
-
-    Returns:
-        AgentAC: Loaded model
-    """
-    if agent is None:
-        envs = get_envs(CONFIG)
-        agent = AgentAC(*get_shape_from_envs(envs))
-
-    if CONFIG.model_version is None:
-        trained_agents, _ = list_dir_files(CONFIG.models_path)
-        # From the model path, get the name (no extension), split by version and keep the number
-        agent_name = os.path.basename(trained_agents[-1])
-        CONFIG.model_version = os.path.splitext(agent_name)[0].split("-v")[-1]
-
-    agent_path = os.path.join(CONFIG.models_path, f"{CONFIG.exp_name}-v{CONFIG.model_version}.pt")
-    try:
-        print(f" - Loading agent at {agent_path}")
-        state = torch.load(agent_path, map_location=CONFIG.device)
-        agent.load_state_dict(state)
-        agent.to(CONFIG.device)
-        agent.eval()
-    except Exception as e:
-        raise RuntimeError(f"Failed to load state_dict from {agent_path}: {e}") from e
-    
-    return agent
 
 # =================================================================================
 #                                    EXTERNAL

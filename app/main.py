@@ -6,7 +6,7 @@ from src.models import train_ppo, evaluate_agent
 from src.utils import set_seed, get_device, start_wandb_tensorboard, load_agent
 from src.config import Configuration, args_to_config
 
-from maikol_utils.file_utils import clear_directories
+from maikol_utils.file_utils import clear_directories, make_dirs
 from maikol_utils.print_utils import print_separator
 
 
@@ -23,8 +23,9 @@ def ppo_train(args: argparse.Namespace):
     
     # ===================== FILES MANAGEMENT =====================
     if CONFIG.remove_old_video and CONFIG.record_video:
-        clear_directories(CONFIG.VIDEOS)
-    os.makedirs(CONFIG.videos_path, exist_ok=True)
+        clear_directories(CONFIG.videos_path)
+    make_dirs([CONFIG.videos_path, CONFIG.checkpoint_path])
+    
 
     # ===================== WANDB =====================
     writer = start_wandb_tensorboard(CONFIG)
@@ -35,6 +36,7 @@ def ppo_train(args: argparse.Namespace):
     agent = train_ppo(CONFIG, writer)
     mean_reward, std_reward = evaluate_agent(agent, CONFIG)
 
+    clear_directories(CONFIG.TEMP)
     print_separator("DONE!", sep_type="START")
 
 
@@ -49,8 +51,8 @@ def ppo_eval(args: argparse.Namespace):
     
     # ===================== FILES MANAGEMENT =====================
     if CONFIG.remove_old_video and CONFIG.record_video:
-        clear_directories(CONFIG.VIDEOS)
-    os.makedirs(CONFIG.videos_path, exist_ok=True)
+        clear_directories(CONFIG.videos_path)
+    make_dirs(CONFIG.videos_path)
 
     # ==============================================================================
     #                                   TRAIN EVALUATE 
@@ -58,8 +60,8 @@ def ppo_eval(args: argparse.Namespace):
     agent = load_agent(CONFIG)
     mean_reward, std_reward = evaluate_agent(agent, CONFIG)
 
+    clear_directories(CONFIG.TEMP)
     print_separator("DONE!", sep_type="START")
-
 
 
 
@@ -85,6 +87,10 @@ def parse_args_config():
     p_ppo_train.add_argument(
         "-ne", "--n_envs", type=int, default=4,
         help="Total number of sub envs for the experiment"
+    )
+    p_ppo_train.add_argument(
+        "-ch", "--use_checkpoint", action='store_true', default=False,
+        help="if toggled (-ch), try to resume the training from a saved checkpoint."
     )
 
     p_ppo_train.add_argument(

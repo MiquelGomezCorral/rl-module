@@ -13,7 +13,7 @@ from torch.utils.tensorboard import SummaryWriter
 from src.config import Configuration
 from src.models.agent import AgentAC # separated because they are in the same module 
 from src.models.env_management import get_envs, get_shape_from_envs
-from src.utils import save_agent
+from src.utils import save_agent, load_checkpoint, save_checkpoint
 
 
 def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
@@ -38,6 +38,11 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
     agent = AgentAC(*get_shape_from_envs(envs)).to(CONFIG.device)
     optimizer = optim.Adam(agent.parameters(), lr=CONFIG.learning_rate, eps=CONFIG.eps)
 
+    # ================== CHECK CHECKPOINT ==================
+    start_update = 1
+    if CONFIG.use_checkpoint:
+        start_update = load_checkpoint(CONFIG, agent, optimizer) 
+
     print(f"   - Observation dimension: {agent.state_dim}. Action dimensions: {agent.action_dim}")
     # ================== VARS ==================
     # Store setup
@@ -56,13 +61,16 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
     next_done   = torch.zeros(CONFIG.n_envs).to(CONFIG.device)
     num_updates = CONFIG.total_timesteps // CONFIG.batch_size
 
+
     # ================================================================
     #                       TRAINING LOOP
     # ================================================================
     print_separator("TRAINING", sep_type="SUPER")
     print(f" - Training for {CONFIG.total_timesteps} time steps and {CONFIG.batch_size} as batch size. {num_updates} updates in total.")
+    if start_update != 1:
+        print(f" - Starting at update: {start_update}.")
     # Episodes?
-    for update in tqdm(range(1, num_updates + 1)):
+    for update in tqdm(range(start_update, num_updates + 1)):
         # 1. Annealing the rate if config says so.
         if CONFIG.anneal_lr:
             frac = 1.0 - (update - 1.0) / num_updates # 1 beginning decreases -> 0
@@ -209,7 +217,10 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
         y_pred, y_true = b_values.cpu().numpy(), b_returns.cpu().numpy()
         var_y = np.var(y_true)
         explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
-            
+
+        # SAVE CHECKPOINT
+        save_checkpoint(CONFIG, agent, optimizer, update)
+
         # TRY NOT TO MODIFY: record rewards for plotting purposes
         writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
         writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
@@ -220,6 +231,7 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
         writer.add_scalar("losses/clipfrac", np.mean([cf.cpu().item() for cf in clip_fracs]), global_step)
         writer.add_scalar("losses/explained_variance", explained_var, global_step)
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
+
     # END FOR UPDATES
 
     # ================================================================

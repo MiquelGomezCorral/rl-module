@@ -10,6 +10,7 @@ class Configuration:
     # ================== Variables ==================
     exp_name:      str = "base_name"
     model_version: int = None
+    use_checkpoint: bool = False
     seed:          int = 42
     record_video: bool = False
     remove_old_video: bool = False
@@ -55,10 +56,12 @@ class Configuration:
     wandb_path:   str = os.path.join(TEMP, "wandb")
     videos_path:  str = os.path.join(VIDEOS, exp_name)
     models_path:  str = os.path.join(MODELS, exp_name)
+    checkpoint_path: str = os.path.join(TEMP, exp_name)
 
     def __post_init__(self):
         self.videos_path = os.path.join(self.VIDEOS,  self.exp_name)
         self.models_path = os.path.join(self.MODELS,  self.exp_name)
+        self.checkpoint_path = os.path.join(self.TEMP,  self.exp_name)
 
 def args_to_config(args: Namespace) -> Configuration:
     """Creates a configuration object from the args parser
