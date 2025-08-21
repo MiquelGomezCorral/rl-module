@@ -41,12 +41,14 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
     # ================== CHECK CHECKPOINT ==================
     start_update = 1
     if CONFIG.use_checkpoint:
-        start_update = load_checkpoint(CONFIG, agent, optimizer) 
+        loaded_agent, start_update = load_checkpoint(CONFIG, optimizer) 
+        if loaded_agent is not None:
+            agent = loaded_agent
 
-    print(f" - Observation dimension: {agent.state_dim}. Action dimensions: {agent.action_dim}")
+    print(f" - Observation dimension: {agent.state_space}. Action dimensions: {agent.action_space}")
     # ================== VARS ==================
     # Store setup
-    states      = torch.zeros((CONFIG.n_steps, CONFIG.n_envs) + (agent.state_dim,)).to(CONFIG.device)
+    states      = torch.zeros((CONFIG.n_steps, CONFIG.n_envs) + (agent.state_space,)).to(CONFIG.device)
     actions  = torch.zeros((CONFIG.n_steps, CONFIG.n_envs)).to(CONFIG.device)
     logprobs = torch.zeros((CONFIG.n_steps, CONFIG.n_envs)).to(CONFIG.device)
     rewards  = torch.zeros((CONFIG.n_steps, CONFIG.n_envs)).to(CONFIG.device)

@@ -13,14 +13,14 @@ class AgentAC(nn.Module):
         hidden_critic: list[int] = [64, 128, 256, 256, 256, 128, 64]
     ):
         super(AgentAC, self).__init__()
-        self.state_dim = np.array(state_space).prod() # input state
-        self.action_dim = action_space                # output action
+        self.state_space = np.array(state_space).prod() # input state
+        self.action_space = action_space                # output action
 
         self.hidden_actor = hidden_actor   # output action
         self.hidden_critic = hidden_critic # output action
 
-        self.critic = self._build_mlp(self.state_dim, 1, hidden_critic, out_std=1.0)
-        self.actor = self._build_mlp(self.state_dim, self.action_dim, hidden_actor, out_std=0.01)
+        self.critic = self._build_mlp(self.state_space, 1, hidden_critic, out_std=1.0)
+        self.actor = self._build_mlp(self.state_space, self.action_space, hidden_actor, out_std=0.01)
 
 
     def _build_mlp(self, in_dim: int, out_dim: int, hidden_sizes: list[int], out_std: float):

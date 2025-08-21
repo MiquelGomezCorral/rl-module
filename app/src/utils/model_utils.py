@@ -28,7 +28,17 @@ def save_agent(CONFIG: Configuration, agent: AgentAC) -> None:
         model_path = os.path.join(CONFIG.models_path, f"{CONFIG.exp_name}-v{version}.pt")
     
     make_dirs(CONFIG.models_path)
-    torch.save(agent.state_dict(), model_path)
+    torch.save({
+        "agent_state_dict": agent.state_dict(),
+        "state_space": agent.state_space,
+        "action_space": agent.action_space,
+        "hidden_actor": agent.hidden_actor,
+        "hidden_critic": agent.hidden_critic,
+        "optimizer_state_dict": None,
+        "update": None,
+        "config": CONFIG,
+    }, model_path)
+
     print(f" - Model saved to {model_path}")
     
 
@@ -60,13 +70,16 @@ def load_agent(CONFIG: Configuration, agent: AgentAC = None) -> AgentAC:
     agent_path = os.path.join(CONFIG.models_path, f"{CONFIG.exp_name}-v{CONFIG.model_version}.pt")
     try:
         print(f" - Loading agent at {agent_path}")
-        state = torch.load(agent_path, map_location=CONFIG.device, weights_only=False)
+        loaded_agent = torch.load(agent_path, map_location=CONFIG.device, weights_only=False)
 
-        if 'agent_state_dict' in state: # if it comes from a checkpoint
-            print(f" - Loading from checkpoint")
-            state = state['agent_state_dict']
+        agent = AgentAC(
+            loaded_agent["state_space"],
+            loaded_agent["action_space"],
+            loaded_agent["hidden_actor"],
+            loaded_agent["hidden_critic"],
+        ).to(CONFIG.device)
+        agent.load_state_dict(loaded_agent["agent_state_dict"])
 
-        agent.load_state_dict(state)
         agent.to(CONFIG.device)
         agent.eval()
     except Exception as e:
@@ -107,6 +120,10 @@ def save_checkpoint(
     
     torch.save({
         "agent_state_dict": agent.state_dict(),
+        "state_space": agent.state_space,
+        "action_space": agent.action_space,
+        "hidden_actor": agent.hidden_actor,
+        "hidden_critic": agent.hidden_critic,
         "optimizer_state_dict": optimizer.state_dict(),
         "update": update,
         "config": CONFIG,
@@ -115,7 +132,6 @@ def save_checkpoint(
 
 def load_checkpoint(
     CONFIG: Configuration, 
-    agent: AgentAC, 
     optimizer: Any
 ) -> int:
     """Load the last checkpoint agent
@@ -132,7 +148,7 @@ def load_checkpoint(
     # From the model path, get the name (no extension), split by version and keep the number
     if n_files == 0:
         print(" - No checkpoint found.")
-        return 0  # Start from scratch
+        return None, 0  # Start from scratch
     
     agent_name = os.path.basename(checkpoints[-1])
     check_number = os.path.splitext(agent_name)[0].split("-v")[-1]
@@ -140,11 +156,18 @@ def load_checkpoint(
     
     if not os.path.exists(checkpoint_path):
         print(" - No checkpoint found.")
-        return 0  # Start from scratch
+        return None, 0  # Start from scratch
     
     checkpoint = torch.load(checkpoint_path, map_location=CONFIG.device, weights_only=False)
+    agent = AgentAC(
+        checkpoint["state_space"],
+        checkpoint["action_space"],
+        checkpoint["hidden_actor"],
+        checkpoint["hidden_critic"],
+    ).to(CONFIG.device)
+
     agent.load_state_dict(checkpoint["agent_state_dict"])
     optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
     print(f" - Checkpoint loaded from {checkpoint_path}")
 
-    return checkpoint["update"] # start from this update
+    return agent, checkpoint["update"] # start from this update
