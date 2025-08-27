@@ -1,6 +1,8 @@
 app==0.1.0
 gymnasium==1.2.0
+maikol-utils==0.6.4
 pip-chill==1.0.3
-tensorboard==2.20.0
 torch==2.8.0
-uv==0.8.11
+tqdm==4.67.1
+uv==0.8.13
+wandb==0.21.1
