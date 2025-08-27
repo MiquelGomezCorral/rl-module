@@ -63,6 +63,8 @@ class Configuration:
         self.videos_path = os.path.join(self.VIDEOS,  self.exp_name)
         self.models_path = os.path.join(self.MODELS,  self.exp_name)
         self.checkpoint_path = os.path.join(self.TEMP,  self.exp_name)
+        self.device = torch.device("cuda" if torch.cuda.is_available() and self.cuda else "cpu")
+
 
 def args_to_config(args: Namespace) -> Configuration:
     """Creates a configuration object from the args parser
@@ -78,3 +80,4 @@ def args_to_config(args: Namespace) -> Configuration:
     fields = {f.name for f in dataclasses.fields(Configuration)}
     filtered = {k: v for k, v in vars(args).items() if k in fields}
     return Configuration(**filtered)
+

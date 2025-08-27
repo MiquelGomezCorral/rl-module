@@ -2,6 +2,7 @@ import os
 import argparse
 
 
+from scripts import ppo_train, ppo_eval
 from src.models import train_ppo, evaluate_agent
 from src.utils import set_seed, get_device, start_wandb_tensorboard, load_agent
 from src.config import Configuration, args_to_config
@@ -10,58 +11,21 @@ from maikol_utils.file_utils import clear_directories, make_dirs
 from maikol_utils.print_utils import print_separator
 
 
-def ppo_train(args: argparse.Namespace):
+def main_ppo_train(args: argparse.Namespace):
     # ==============================================================================
     #                                   CONFIGURATION
     # ==============================================================================
     CONFIG: Configuration = args_to_config(args)
-
-    CONFIG.batch_size = int(CONFIG.n_envs * CONFIG.n_steps) 
-    CONFIG.mini_batch_size = int(CONFIG.batch_size // CONFIG.n_mini_batches) 
-    CONFIG.device = get_device(CONFIG)
-    set_seed(CONFIG.seed)
-    
-    # ===================== FILES MANAGEMENT =====================
-    if CONFIG.remove_old_video and CONFIG.record_video:
-        clear_directories(CONFIG.videos_path)
-    make_dirs([CONFIG.videos_path, CONFIG.checkpoint_path])
-    
-
-    # ===================== WANDB =====================
-    writer = start_wandb_tensorboard(CONFIG)
-
-    # ==============================================================================
-    #                                   TRAIN EVALUATE 
-    # ==============================================================================
-    agent = train_ppo(CONFIG, writer)
-    mean_reward, std_reward = evaluate_agent(agent, CONFIG)
-
-    clear_directories(CONFIG.TEMP)
-    print_separator("DONE!", sep_type="START")
+    ppo_train(CONFIG)
 
 
-def ppo_eval(args: argparse.Namespace):
+def main_ppo_eval(args: argparse.Namespace):
     # ==============================================================================
     #                                   CONFIGURATION
     # ==============================================================================
     CONFIG: Configuration = args_to_config(args)
+    ppo_eval(CONFIG)
 
-    CONFIG.device = get_device(CONFIG)
-    set_seed(CONFIG.seed)
-    
-    # ===================== FILES MANAGEMENT =====================
-    if CONFIG.remove_old_video and CONFIG.record_video:
-        clear_directories(CONFIG.videos_path)
-    make_dirs(CONFIG.videos_path)
-
-    # ==============================================================================
-    #                                   TRAIN EVALUATE 
-    # ==============================================================================
-    agent = load_agent(CONFIG)
-    mean_reward, std_reward = evaluate_agent(agent, CONFIG)
-
-    clear_directories(CONFIG.TEMP)
-    print_separator("DONE!", sep_type="START")
 
 
 
@@ -77,7 +41,7 @@ def parse_args_config():
     # ======================================================================================
     # ===================== GENERAL =====================
     p_ppo_train = subparsers.add_parser("ppo-train", help="Train a ppo model")
-    p_ppo_train.set_defaults(func=ppo_train)
+    p_ppo_train.set_defaults(func=main_ppo_train)
 
     p_ppo_train.add_argument("--seed", type=int, default=42, help="Random seed (default: 42)")
     p_ppo_train.add_argument(
@@ -207,7 +171,7 @@ def parse_args_config():
     #                                       EVALUATE
     # ======================================================================================
     p_ppo_eval = subparsers.add_parser("ppo-eval", help="Evaluate a ppo model")
-    p_ppo_eval.set_defaults(func=ppo_eval)
+    p_ppo_eval.set_defaults(func=main_ppo_eval)
 
     p_ppo_eval.add_argument("--seed", type=int, default=42, help="Random seed (default: 42)")
     p_ppo_eval.add_argument(

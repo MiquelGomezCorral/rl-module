@@ -6,11 +6,7 @@ from time import time
 from dataclasses import asdict
 from torch.utils.tensorboard import SummaryWriter
 
-from src.models.agent import AgentAC
-from src.models.env_management import get_envs, get_shape_from_envs
 from src.config import Configuration
-
-from maikol_utils.file_utils import list_dir_files
 
 # =================================================================================
 #                                    GENERAL
@@ -28,18 +24,6 @@ def set_seed(seed: int, torch_deterministic: bool = None):
 
     if torch_deterministic is not None:
         torch.backends.cudnn.deterministic = torch_deterministic
-
-
-def get_device(CONFIG: Configuration) -> torch.device:
-    """Return the correct device acording to configuration and hardware
-
-    Args:
-        CONFIG (Configuration): Configuration
-
-    Returns:
-        torch.device: Selected device
-    """
-    return torch.device("cuda" if torch.cuda.is_available() and CONFIG.cuda else "cpu")
 
 # =================================================================================
 #                                    EXTERNAL

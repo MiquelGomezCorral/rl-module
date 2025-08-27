@@ -43,7 +43,7 @@ def save_agent(CONFIG: Configuration, agent: AgentAC) -> None:
     
 
 def load_agent(CONFIG: Configuration, agent: AgentAC = None) -> AgentAC:
-    """Load and agent from memory.
+    """Load and agent from memory. If no agent passed, create one from config.
 
     If config has no version specified, it will look for the newest.
 
