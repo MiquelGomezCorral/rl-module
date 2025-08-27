@@ -1,32 +1,28 @@
 import os
 import argparse
 
-
 from scripts import ppo_train, ppo_eval
-from src.models import train_ppo, evaluate_agent
-from src.utils import set_seed, get_device, start_wandb_tensorboard, load_agent
 from src.config import Configuration, args_to_config
-
-from maikol_utils.file_utils import clear_directories, make_dirs
-from maikol_utils.print_utils import print_separator
 
 
 def main_ppo_train(args: argparse.Namespace):
-    # ==============================================================================
-    #                                   CONFIGURATION
-    # ==============================================================================
+    """Given the args, instance the configuration and call the train scrip.
+
+    Args:
+        args (argparse.Namespace): Arguments
+    """
     CONFIG: Configuration = args_to_config(args)
     ppo_train(CONFIG)
 
 
 def main_ppo_eval(args: argparse.Namespace):
-    # ==============================================================================
-    #                                   CONFIGURATION
-    # ==============================================================================
+    """Given the args, instance the configuration and call the eval scrip.
+
+    Args:
+        args (argparse.Namespace): Arguments
+    """
     CONFIG: Configuration = args_to_config(args)
     ppo_eval(CONFIG)
-
-
 
 
 def parse_args_config():
