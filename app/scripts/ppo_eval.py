@@ -36,4 +36,5 @@ def ppo_eval(CONFIG: Configuration):
     mean_reward, std_reward = evaluate_agent(agent, CONFIG)
 
     clear_directories(CONFIG.TEMP)
+    
     print_separator("DONE!", sep_type="START")

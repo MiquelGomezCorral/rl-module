@@ -195,8 +195,8 @@ def parse_args_config():
     )
 
     p_ppo_eval.add_argument(
-        "-ep", "--n_eval_episodes", type=int, default=25,
-        help="Total number episodes to evaluate the agent"
+        "-ep", "--n_eval_steps", type=int, default=20_000,
+        help="Total number steps to evaluate the agent"
     )
     p_ppo_eval.add_argument(
         "-mv", "--model_version", type=int, default=None,

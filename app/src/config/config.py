@@ -16,7 +16,7 @@ class Configuration:
     record_video:   bool = False
     remove_old_video: bool = False
     fps:             int = 30
-    n_eval_episodes: int = 25
+    n_eval_steps: int = 20_000
 
     gym_id:          str = "CartPole-v1"
     n_envs:          int = 4

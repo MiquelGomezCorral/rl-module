@@ -24,7 +24,6 @@ def evaluate_agent(agent: AgentAC, CONFIG: Configuration) -> tuple[float, float]
         mean_reward (float): Mean episodic reward.
         std_reward (float): Std of episodic reward.
     """
-    print_separator(f"EVALUATING PPO AGENT '{CONFIG.exp_name}'", sep_type="START")
     print_separator("CONFIGURATION", sep_type="LONG")
     # ================================================================
     #                       ENV MANAGEMENT
@@ -45,9 +44,9 @@ def evaluate_agent(agent: AgentAC, CONFIG: Configuration) -> tuple[float, float]
     #                       EVALUATING LOOP
     # ================================================================
     print_separator("EVALUATING", sep_type="SUPER")
-    print(f" - Evaluating for {CONFIG.n_eval_episodes}.")
+    print(f" - Evaluating for {CONFIG.n_eval_steps}.")
 
-    for episode in tqdm(range(1, CONFIG.n_eval_episodes + 1)):
+    for episode in tqdm(range(1, CONFIG.n_eval_steps + 1)):
         with torch.no_grad():
             actions, _, _, _ = agent.get_action_value(states)
 

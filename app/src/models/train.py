@@ -22,7 +22,6 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
     Args:
         CONFIG (Configuration): Configuration for the training
     """
-    print_separator(f"TRAINING PPO '{CONFIG.exp_name}'", sep_type="START")
     print_separator("CONFIGURATION", sep_type="LONG")
     # ================================================================
     #                       ENV MANAGEMENT
