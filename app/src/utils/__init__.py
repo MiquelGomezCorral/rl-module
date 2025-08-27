@@ -4,6 +4,5 @@ from .model_utils import (
     load_agent,
     load_checkpoint,
     save_checkpoint,
-    layer_init,
-    build_mlp
+    get_agent_from_config
 )

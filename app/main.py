@@ -45,6 +45,10 @@ def parse_args_config():
         help="The name of the experiment."
     )
     p_ppo_train.add_argument(
+        "-cnn", "--convolutional", action='store_true', default=False,
+        help="if toggled (-cnn), the model will have a convolutional layer before the mlp."
+    )
+    p_ppo_train.add_argument(
         "-ne", "--n_envs", type=int, default=4,
         help="Total number of sub envs for the experiment"
     )
@@ -57,6 +61,10 @@ def parse_args_config():
         help="When saving checkpoints, keep the last k agents."
     )
      
+    p_ppo_train.add_argument(
+        "-es", "--n_eval_steps", type=int, default=20_000,
+        help="Total number steps to evaluate the agent"
+    )
 
     p_ppo_train.add_argument(
         "-v", "--record_video", action='store_true', default=False,
@@ -107,7 +115,7 @@ def parse_args_config():
         help="The number mini batches."
     )
     p_ppo_train.add_argument(
-        "-ue", "--update_epochs", type=int, default=16,
+        "-ue", "--update_epochs", type=int, default=8,
         help="The K epochs to update the policy."
     )
     p_ppo_train.add_argument(
@@ -193,9 +201,8 @@ def parse_args_config():
         "-ne", "--n_envs", type=int, default=4,
         help="Total number of sub envs for the experiment"
     )
-
     p_ppo_eval.add_argument(
-        "-ep", "--n_eval_steps", type=int, default=20_000,
+        "-es", "--n_eval_steps", type=int, default=20_000,
         help="Total number steps to evaluate the agent"
     )
     p_ppo_eval.add_argument(

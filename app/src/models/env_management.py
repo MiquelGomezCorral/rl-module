@@ -1,4 +1,8 @@
+import torch
+from typing import Any
 import gymnasium as gym
+
+from vizdoom import gymnasium_wrapper
 
 from src.config import Configuration
 
@@ -14,7 +18,50 @@ def get_shape_from_envs(envs: gym.Env) -> tuple:
             - State shape
             - Actions shape
     """
-    return envs.single_observation_space.shape, envs.single_action_space.n
+    obs_space = envs.single_observation_space
+    act_space = envs.single_action_space
+
+    # Handle Dict observation spaces (e.g., VizDoom 'screen')
+    if isinstance(obs_space, gym.spaces.Dict):
+        # pick the 'screen' key for CNN input
+        obs_shape = obs_space['screen'].shape
+    else:
+        obs_shape = obs_space.shape
+
+    # Handle Discrete or Box action spaces
+    if hasattr(act_space, "n"):
+        action_shape = act_space.n
+    else:
+        action_shape = act_space.shape[0]
+
+    return obs_shape, action_shape
+
+def handle_states(CONFIG: Configuration, obs: Any) -> torch.Tensor:
+    """Convert environment observations to a PyTorch tensor on the correct device.
+
+    Handles both raw arrays and dict observations (e.g., ViZDoom) by extracting
+    the 'screen' key if present. Moves the resulting tensor to the device
+    specified in the configuration.
+
+    Args:
+        CONFIG (Configuration): Configuration object containing device info.
+        obs (Any): Observation from the environment, can be a numpy array or a dict.
+
+    Returns:
+        torch.Tensor: Observation tensor ready for model input, on CONFIG.device.
+    """
+    if isinstance(obs, dict):
+        obs = obs['screen']  # use the image part for CNN input
+    obs = torch.as_tensor(obs, dtype=torch.float32, device=CONFIG.device)
+
+    if CONFIG.convolutional:
+        if obs.ndim == 4 and obs.shape[-1] in (1, 3):
+            obs = obs.permute(0, 3, 1, 2)  # -> [N,C,H,W]
+        else:
+            raise ValueError(f"handle_states expected batched NHWC image, got {obs.shape}")
+
+    return obs
+
 
 def get_envs(CONFIG: Configuration, evaluating: bool = False) -> gym.vector.SyncVectorEnv:
     """

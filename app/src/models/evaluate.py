@@ -8,7 +8,7 @@ from maikol_utils.time_tracker import print_time
 
 from src.config import Configuration
 from src.models.agent import ACAgent
-from src.models.env_management import get_envs
+from src.models.env_management import get_envs, handle_states
 
 
 def evaluate_agent(agent: ACAgent, CONFIG: Configuration) -> tuple[float, float]:
@@ -36,7 +36,7 @@ def evaluate_agent(agent: ACAgent, CONFIG: Configuration) -> tuple[float, float]
     # ================================================================
     print(f" - Creating vars...")
     episode_rewards = []
-    states = torch.Tensor(envs.reset()[0]).to(CONFIG.device)
+    states = handle_states(CONFIG, envs.reset()[0])
     dones = torch.zeros(CONFIG.n_envs, dtype=bool)
     start_time = time()
 
@@ -51,7 +51,7 @@ def evaluate_agent(agent: ACAgent, CONFIG: Configuration) -> tuple[float, float]
             actions, _, _, _ = agent.get_action_value(states)
 
         next_states, rewards, terms, truncs, infos = envs.step(actions.cpu().numpy())
-        states = torch.Tensor(next_states).to(CONFIG.device)
+        states = handle_states(CONFIG, next_states)
         dones = terms | truncs
 
         episode_rewards.append(np.array(rewards))

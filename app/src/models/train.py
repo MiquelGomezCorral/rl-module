@@ -11,9 +11,8 @@ import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 
 from src.config import Configuration
-from src.models.agent import ACAgent # separated because they are in the same module 
-from src.models.env_management import get_envs, get_shape_from_envs
-from src.utils import save_agent, load_checkpoint, save_checkpoint
+from src.models.env_management import get_envs, handle_states, get_shape_from_envs
+from src.utils import save_agent, load_checkpoint, save_checkpoint, get_agent_from_config
 
 
 def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
@@ -29,12 +28,17 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
     print(f" - Creating envs...")
     # envs = create_env(CONFIG)
     envs = get_envs(CONFIG)
+    state_shape, action_shape = get_shape_from_envs(envs)
+    if hasattr(envs.single_action_space, "n"):
+        action_shape_tuple = ()           # discrete scalar actions -> shape (-1,)
+    else:
+        action_shape_tuple = tuple(action_shape)
     # ================================================================
     #                           AGENT & VARS
     # ================================================================
     print(f" - Creating agent and vars...")
     # ================== AGENT ==================
-    agent = ACAgent(*get_shape_from_envs(envs)).to(CONFIG.device)
+    agent = get_agent_from_config(CONFIG, envs)
     optimizer = optim.Adam(agent.parameters(), lr=CONFIG.learning_rate, eps=CONFIG.eps)
 
     # ================== CHECK CHECKPOINT ==================
@@ -45,21 +49,24 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
             agent = loaded_agent
 
     print(f" - Observation dimension: {agent.state_space}. Action dimensions: {agent.action_space}")
+    # ================== OTHERS ==================
+    global_step = 0
+    start_time  = time.time()
+    next_done   = torch.zeros(CONFIG.n_envs).to(CONFIG.device)
+    num_updates = CONFIG.total_timesteps // CONFIG.batch_size
+    next_states = handle_states(CONFIG, envs.reset()[0]) 
+
     # ================== VARS ==================
     # Store setup
-    states      = torch.zeros((CONFIG.n_steps, CONFIG.n_envs) + (agent.state_space,)).to(CONFIG.device)
+    if not CONFIG.convolutional:
+        states = torch.zeros((CONFIG.n_steps, CONFIG.n_envs) + (agent.state_space,)).to(CONFIG.device)
+    else:
+        states = torch.zeros((CONFIG.n_steps, CONFIG.n_envs) + next_states.shape[1:], device=CONFIG.device)
     actions  = torch.zeros((CONFIG.n_steps, CONFIG.n_envs)).to(CONFIG.device)
     logprobs = torch.zeros((CONFIG.n_steps, CONFIG.n_envs)).to(CONFIG.device)
     rewards  = torch.zeros((CONFIG.n_steps, CONFIG.n_envs)).to(CONFIG.device)
     dones    = torch.zeros((CONFIG.n_steps, CONFIG.n_envs)).to(CONFIG.device)
     values   = torch.zeros((CONFIG.n_steps, CONFIG.n_envs)).to(CONFIG.device)
-
-    # ================== OTHERS ==================
-    global_step = 0
-    start_time  = time.time()
-    next_states = torch.Tensor(envs.reset()[0]).to(CONFIG.device)
-    next_done   = torch.zeros(CONFIG.n_envs).to(CONFIG.device)
-    num_updates = CONFIG.total_timesteps // CONFIG.batch_size
 
 
     # ================================================================
@@ -81,7 +88,7 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
         for step in range(CONFIG.n_steps):
             # 2.1 Updating variables
             global_step += CONFIG.n_envs
-            states[step]   = next_states
+            states[step] = next_states
             dones[step] = next_done
 
             # 2.2 Getting the model actions / predictions
@@ -95,8 +102,8 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
             # 2.3 Acting in the environment
             next_states, reward, term, trunc, info = envs.step(action.cpu().numpy())
             rewards[step] = torch.tensor(reward).to(CONFIG.device).view(-1)
-            next_states   = torch.Tensor(next_states).to(CONFIG.device)
-            next_done     = torch.Tensor(term | trunc).to(CONFIG.device)
+            next_states = handle_states(CONFIG, next_states) 
+            next_done = torch.Tensor(term | trunc).to(CONFIG.device)
 
             if global_step % 1_000 == 0:
                 for k, v in info.items():
@@ -140,9 +147,17 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
                 advantages = returns - values
 
         # 4. flatten the batch
-        b_states     = states.reshape((-1,) + envs.single_observation_space.shape)
+        b_states = states.reshape((-1,) + state_shape)
+        if CONFIG.convolutional:
+            # convert NHWC -> NCHW if last dim is channels
+            if b_states.ndim == 4 and b_states.shape[-1] in (1, 3):
+                b_states = b_states.permute(0, 3, 1, 2).contiguous()
+            else:
+                raise ValueError(f"Expected NHWC batched images, got {b_states.shape}")
+        b_states = b_states.to(dtype=torch.float32, device=CONFIG.device)
+
         b_logprobs   = logprobs.reshape(-1)
-        b_actions    = actions.reshape((-1,) + envs.single_action_space.shape)
+        b_actions    = actions.reshape((-1,) + action_shape_tuple)
         b_advantages = advantages.reshape(-1)
         b_returns    = returns.reshape(-1)
         b_values     = values.reshape(-1)

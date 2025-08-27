@@ -1,10 +1,10 @@
 import os
 import torch
-import numpy as np
-import torch.nn as nn
 from typing import Any
+import gymnasium as gym
 
 from src.models.agent import ACAgent
+from src.models.agent_cnn import ACAgentCNN
 from src.models.env_management import get_envs, get_shape_from_envs
 from src.config import Configuration
 
@@ -13,6 +13,21 @@ from maikol_utils.file_utils import list_dir_files, make_dirs
 # =================================================================================
 #                                    MODEL
 # =================================================================================
+def get_agent_from_config(CONFIG: Configuration, envs: gym.vector.SyncVectorEnv) -> ACAgent:
+    """Ginen the configuration and the envs, gets the correct agent
+
+    Args:
+        CONFIG (Configuration): Configuration
+        envs (gym.vector.SyncVectorEnv): Vectorized envs
+
+    Returns:
+        ACAgent: Empty agent 
+    """
+    if not CONFIG.convolutional:
+        return ACAgent(*get_shape_from_envs(envs)).to(CONFIG.device)
+    else:
+        return ACAgentCNN(*get_shape_from_envs(envs)).to(CONFIG.device)
+
 def save_agent(CONFIG: Configuration, agent: ACAgent) -> None:
     """Saves the agent in memory.
 
@@ -173,44 +188,3 @@ def load_checkpoint(
     print(f" - Checkpoint loaded from {checkpoint_path}")
 
     return agent, checkpoint["update"] # start from this update
-
-
-# =================================================================================
-#                                    MODEL lAYERS
-# =================================================================================
-def layer_init(layer: Any, std: float = np.sqrt(2), bias_const: float = 0.0) -> Any:
-    """Initialize the values of a layer
-
-    Args:
-        layer (Any): The layer
-        std (float, optional): Standar deviation. Defaults to np.sqrt(2).
-        bias_const (float, optional): The bias. Defaults to 0.0.
-
-    Returns:
-        Any: The updated layer
-    """
-    torch.nn.init.orthogonal_(layer.weight, std)
-    torch.nn.init.constant_(layer.bias, bias_const)
-    return layer
-
-def build_mlp(in_dim: int, out_dim: int, hidden_sizes: list[int], out_std: float):
-    """Builds the sequential layers for a submodel.
-
-    Args:
-        in_dim (int): In dimension.
-        out_dim (int): Out dimension.
-        hidden_sizes (list[int]): Size of the inner layers
-        out_std (float): last layer std
-
-    Returns:
-        nn.Sequential: The sencuantialized layers.
-    """
-    layers = []
-    # In size for in layer
-    prev = in_dim
-    for h in hidden_sizes:
-        layers += [layer_init(nn.Linear(prev, h)), nn.Tanh()]
-        prev = h
-    # Out size for out layer
-    layers.append(layer_init(nn.Linear(prev, out_dim), std=out_std))
-    return nn.Sequential(*layers)

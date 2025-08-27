@@ -1,15 +1,12 @@
-import numpy as np
-
 import torch
 import torch.nn as nn
-from torch.distributions.categorical import Categorical
+import torch.nn.functional as F
+from torch.distributions import Categorical
 
-from src.utils import build_mlp
+from src.models.agent import ACAgent, build_mlp
 
-# ========================================================================================
-#                                           AGENT
-# ========================================================================================
-class ACAgentCNN(nn.Module):
+
+class ACAgentCNN(ACAgent):
     """Actor-Critic agent with a CNN encoder for image-based RL environments.
 
     The CNN extracts features from raw pixels, which are then fed into
@@ -29,12 +26,7 @@ class ACAgentCNN(nn.Module):
         hidden_critic: list[int] = [64, 128, 256, 256, 256, 128, 64],
         cnn_input_channels: int = 3, cnn_feature_dim: int = 256
     ):
-        super(ACAgentCNN, self).__init__()
-        self.state_space = np.array(state_space).prod() # input state
-        self.action_space = action_space                # output action
-
-        self.hidden_actor = hidden_actor   # output action
-        self.hidden_critic = hidden_critic # output action
+        super(ACAgentCNN, self).__init__(state_space, action_space, hidden_actor, hidden_critic)
 
         self.cnn = CNNEncoder(cnn_input_channels, cnn_feature_dim)
         self.cnn_input_channels = cnn_input_channels
@@ -59,44 +51,41 @@ class ACAgentCNN(nn.Module):
             torch.Tensor: Encoded feature vector of shape (B, feature_dim).
         """
         return self.cnn(x / 255.0)  # normalize pixels
-
-
-    def get_value(self, state: np.ndarray):
-        """Get the critic value for state 
+    
+    def get_value(self, state: torch.Tensor):
+        """
+        Compute the critic value for a given state.
 
         Args:
-            x (np.array): The state to evaluate
+            state (torch.Tensor): Input image tensor of shape (B, C, H, W).
 
         Returns:
-            tensor: The evaluated tensor
+            torch.Tensor: Estimated state-value (B, 1).
         """
-        return self.critic(state)
-    
+        features = self.forward_features(state)
+        return self.critic(features)
 
-    def get_action_value(self, state, action=None) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    def get_action_value(self, state: torch.Tensor, action=None):
         """
-        Compute the action, log-probability, entropy, and state value for a given state.
+        Sample an action and compute log-prob, entropy, and value estimate.
 
         Args:
-            state (torch.Tensor or np.ndarray): The input state(s) for the policy and value network.
-            action (torch.Tensor, optional): Pre-selected action. If None, an action is sampled from the policy.
+            state (torch.Tensor): Input image tensor of shape (B, C, H, W).
+            action (torch.Tensor, optional): Predefined action. If None, an action is sampled.
 
         Returns:
             tuple:
-                action (torch.Tensor): Selected or sampled action(s).
-                log_prob (torch.Tensor): Log-probability of the action(s) under the current policy.
-                entropy (torch.Tensor): Entropy of the policy distribution for exploration measurement.
-                value (torch.Tensor): Critic value estimate for the given state(s).
+                - action (torch.Tensor): Chosen action.
+                - log_prob (torch.Tensor): Log probability of the action.
+                - entropy (torch.Tensor): Policy entropy for exploration.
+                - value (torch.Tensor): Critic value estimate.
         """
-        logits = self.actor(state)
-        # Softmax like operation
+        features = self.forward_features(state)
+        logits = self.actor(features)
         probs = Categorical(logits=logits)
         if action is None:
             action = probs.sample()
-
-        return action, probs.log_prob(action), probs.entropy(), self.critic(state)
-
-
+        return action, probs.log_prob(action), probs.entropy(), self.critic(features)
 
 
 class CNNEncoder(nn.Module):
@@ -109,18 +98,18 @@ class CNNEncoder(nn.Module):
             nn.ReLU(),
             nn.Conv2d(64, 64, kernel_size=3, stride=1),
             nn.ReLU(),
-            nn.Flatten()
+            # nn.Flatten()
         )
-        # dummy input to compute output size after convs
-        with torch.no_grad():
-            dummy = torch.zeros(1, input_channels, 84, 84)  # adjust to your frame size
-            n_flat = self.conv(dummy).shape[1]
+        # adaptive pool -> always outputs (B, 64, 1, 1)
+        self.global_pool = nn.AdaptiveAvgPool2d((1, 1))
 
-        self.fc = nn.Linear(n_flat, feature_dim)
-        self.relu = nn.ReLU()
+        # final linear from conv channels -> feature_dim
+        self.fc = nn.Linear(64, feature_dim)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # x: [B, C, H, W], float
         x = self.conv(x)
-        x = self.fc(x)
-        x = self.relu(x)
-        return x
+        x = self.global_pool(x)      # [B, 64, 1, 1]
+        x = x.view(x.size(0), -1)    # [B, 64]
+        x = self.fc(x)               # [B, feature_dim]
+        return F.relu(x)

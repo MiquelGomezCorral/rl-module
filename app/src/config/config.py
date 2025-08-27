@@ -11,12 +11,13 @@ class Configuration:
     exp_name:        str = "base_name"
     model_version:   int = None
     use_checkpoint: bool = False
+    convolutional:  bool = False
     keep_last_k:     int = 2
     seed:            int = 42
     record_video:   bool = False
     remove_old_video: bool = False
     fps:             int = 30
-    n_eval_steps: int = 20_000
+    n_eval_steps:    int = 20_000
 
     gym_id:          str = "CartPole-v1"
     n_envs:          int = 4

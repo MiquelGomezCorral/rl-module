@@ -5,11 +5,7 @@ import torch
 import torch.nn as nn
 from torch.distributions.categorical import Categorical
 
-from src.utils import build_mlp
 
-# ========================================================================================
-#                                    AUX FUNCTIONS
-# ========================================================================================
 class ACAgent(nn.Module):
     """Actor-Critic agent for reinforcement learning.
 
@@ -30,6 +26,7 @@ class ACAgent(nn.Module):
         hidden_critic: list[int] = [64, 128, 256, 256, 256, 128, 64],
     ):
         super(ACAgent, self).__init__()
+        
         self.state_space = np.array(state_space).prod() # input state
         self.action_space = action_space                # output action
 
@@ -76,3 +73,43 @@ class ACAgent(nn.Module):
         return action, probs.log_prob(action), probs.entropy(), self.critic(state)
 
 
+
+# =================================================================================
+#                                    MODEL lAYERS
+# =================================================================================
+def layer_init(layer: Any, std: float = np.sqrt(2), bias_const: float = 0.0) -> Any:
+    """Initialize the values of a layer
+
+    Args:
+        layer (Any): The layer
+        std (float, optional): Standar deviation. Defaults to np.sqrt(2).
+        bias_const (float, optional): The bias. Defaults to 0.0.
+
+    Returns:
+        Any: The updated layer
+    """
+    torch.nn.init.orthogonal_(layer.weight, std)
+    torch.nn.init.constant_(layer.bias, bias_const)
+    return layer
+
+def build_mlp(in_dim: int, out_dim: int, hidden_sizes: list[int], out_std: float):
+    """Builds the sequential layers for a submodel.
+
+    Args:
+        in_dim (int): In dimension.
+        out_dim (int): Out dimension.
+        hidden_sizes (list[int]): Size of the inner layers
+        out_std (float): last layer std
+
+    Returns:
+        nn.Sequential: The sencuantialized layers.
+    """
+    layers = []
+    # In size for in layer
+    prev = in_dim
+    for h in hidden_sizes:
+        layers += [layer_init(nn.Linear(prev, h)), nn.Tanh()]
+        prev = h
+    # Out size for out layer
+    layers.append(layer_init(nn.Linear(prev, out_dim), std=out_std))
+    return nn.Sequential(*layers)
