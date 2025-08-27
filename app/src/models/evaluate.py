@@ -7,11 +7,11 @@ from maikol_utils.print_utils import print_separator
 from maikol_utils.time_tracker import print_time
 
 from src.config import Configuration
-from src.models.agent import AgentAC
+from src.models.agent import ACAgent
 from src.models.env_management import get_envs
 
 
-def evaluate_agent(agent: AgentAC, CONFIG: Configuration) -> tuple[float, float]:
+def evaluate_agent(agent: ACAgent, CONFIG: Configuration) -> tuple[float, float]:
     """
     Evaluate the agent for n_eval_episodes and return average reward and std of reward.
 

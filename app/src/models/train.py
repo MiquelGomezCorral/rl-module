@@ -11,7 +11,7 @@ import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 
 from src.config import Configuration
-from src.models.agent import AgentAC # separated because they are in the same module 
+from src.models.agent import ACAgent # separated because they are in the same module 
 from src.models.env_management import get_envs, get_shape_from_envs
 from src.utils import save_agent, load_checkpoint, save_checkpoint
 
@@ -34,7 +34,7 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
     # ================================================================
     print(f" - Creating agent and vars...")
     # ================== AGENT ==================
-    agent = AgentAC(*get_shape_from_envs(envs)).to(CONFIG.device)
+    agent = ACAgent(*get_shape_from_envs(envs)).to(CONFIG.device)
     optimizer = optim.Adam(agent.parameters(), lr=CONFIG.learning_rate, eps=CONFIG.eps)
 
     # ================== CHECK CHECKPOINT ==================

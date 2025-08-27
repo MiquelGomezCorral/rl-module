@@ -1,8 +1,10 @@
 import os
 import torch
+import numpy as np
+import torch.nn as nn
 from typing import Any
 
-from src.models.agent import AgentAC
+from src.models.agent import ACAgent
 from src.models.env_management import get_envs, get_shape_from_envs
 from src.config import Configuration
 
@@ -11,7 +13,7 @@ from maikol_utils.file_utils import list_dir_files, make_dirs
 # =================================================================================
 #                                    MODEL
 # =================================================================================
-def save_agent(CONFIG: Configuration, agent: AgentAC) -> None:
+def save_agent(CONFIG: Configuration, agent: ACAgent) -> None:
     """Saves the agent in memory.
 
     It assigns it a version. If the version is already created check for
@@ -42,7 +44,7 @@ def save_agent(CONFIG: Configuration, agent: AgentAC) -> None:
     print(f" - Model saved to {model_path}")
     
 
-def load_agent(CONFIG: Configuration, agent: AgentAC = None) -> AgentAC:
+def load_agent(CONFIG: Configuration, agent: ACAgent = None) -> ACAgent:
     """Load and agent from memory. If no agent passed, create one from config.
 
     If config has no version specified, it will look for the newest.
@@ -59,7 +61,7 @@ def load_agent(CONFIG: Configuration, agent: AgentAC = None) -> AgentAC:
     """
     if agent is None:
         envs = get_envs(CONFIG)
-        agent = AgentAC(*get_shape_from_envs(envs))
+        agent = ACAgent(*get_shape_from_envs(envs))
 
     if CONFIG.model_version is None:
         trained_agents, _ = list_dir_files(CONFIG.models_path)
@@ -72,7 +74,7 @@ def load_agent(CONFIG: Configuration, agent: AgentAC = None) -> AgentAC:
         print(f" - Loading agent at {agent_path}")
         loaded_agent = torch.load(agent_path, map_location=CONFIG.device, weights_only=False)
 
-        agent = AgentAC(
+        agent = ACAgent(
             loaded_agent["state_space"],
             loaded_agent["action_space"],
             loaded_agent["hidden_actor"],
@@ -93,7 +95,7 @@ def load_agent(CONFIG: Configuration, agent: AgentAC = None) -> AgentAC:
 # =================================================================================
 def save_checkpoint(
     CONFIG: Configuration, 
-    agent: AgentAC, 
+    agent: ACAgent, 
     optimizer: Any, 
     update: int, 
 ):
@@ -159,7 +161,7 @@ def load_checkpoint(
         return None, 0  # Start from scratch
     
     checkpoint = torch.load(checkpoint_path, map_location=CONFIG.device, weights_only=False)
-    agent = AgentAC(
+    agent = ACAgent(
         checkpoint["state_space"],
         checkpoint["action_space"],
         checkpoint["hidden_actor"],
@@ -171,3 +173,44 @@ def load_checkpoint(
     print(f" - Checkpoint loaded from {checkpoint_path}")
 
     return agent, checkpoint["update"] # start from this update
+
+
+# =================================================================================
+#                                    MODEL lAYERS
+# =================================================================================
+def layer_init(layer: Any, std: float = np.sqrt(2), bias_const: float = 0.0) -> Any:
+    """Initialize the values of a layer
+
+    Args:
+        layer (Any): The layer
+        std (float, optional): Standar deviation. Defaults to np.sqrt(2).
+        bias_const (float, optional): The bias. Defaults to 0.0.
+
+    Returns:
+        Any: The updated layer
+    """
+    torch.nn.init.orthogonal_(layer.weight, std)
+    torch.nn.init.constant_(layer.bias, bias_const)
+    return layer
+
+def build_mlp(in_dim: int, out_dim: int, hidden_sizes: list[int], out_std: float):
+    """Builds the sequential layers for a submodel.
+
+    Args:
+        in_dim (int): In dimension.
+        out_dim (int): Out dimension.
+        hidden_sizes (list[int]): Size of the inner layers
+        out_std (float): last layer std
+
+    Returns:
+        nn.Sequential: The sencuantialized layers.
+    """
+    layers = []
+    # In size for in layer
+    prev = in_dim
+    for h in hidden_sizes:
+        layers += [layer_init(nn.Linear(prev, h)), nn.Tanh()]
+        prev = h
+    # Out size for out layer
+    layers.append(layer_init(nn.Linear(prev, out_dim), std=out_std))
+    return nn.Sequential(*layers)
