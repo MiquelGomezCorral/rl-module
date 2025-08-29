@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Categorical
 
-from src.models.agent import ACAgent, build_mlp
+from src.models.agent import ACAgent, build_mlp, layer_init
 
 
 class ACAgentCNN(ACAgent):
@@ -22,15 +22,28 @@ class ACAgentCNN(ACAgent):
     """
     def __init__(
         self, state_space: tuple, action_space: int,
-        hidden_actor: list[int] = [64, 128, 256, 256, 256, 128, 64],
-        hidden_critic: list[int] = [64, 128, 256, 256, 256, 128, 64],
-        cnn_input_channels: int = 3, cnn_feature_dim: int = 256
+        hidden_actor: list[int] = [256, 128, 64],
+        hidden_critic: list[int] = [256, 128, 64],
+        cnn_input_channels: int = 4, cnn_feature_dim: int = 512
     ):
         super(ACAgentCNN, self).__init__(state_space, action_space, hidden_actor, hidden_critic)
 
-        self.cnn = CNNEncoder(cnn_input_channels, cnn_feature_dim)
+        self.cnn = nn.Sequential(
+            layer_init(nn.Conv2d(cnn_input_channels, 32, kernel_size=8, stride=4)),
+            nn.ReLU(),
+            layer_init(nn.Conv2d(32, 64, kernel_size=4, stride=2)),
+            nn.ReLU(),
+            layer_init(nn.Conv2d(64, 64, kernel_size=3, stride=1)),
+            nn.ReLU(),
+
+            nn.Flatten(),
+            layer_init(nn.Linear(64*7*7, cnn_feature_dim)),
+            nn.ReLU(),
+        )
+
         self.cnn_input_channels = cnn_input_channels
         self.cnn_feature_dim = cnn_feature_dim
+
 
         self.actor = build_mlp(self.cnn_feature_dim, self.action_space, hidden_actor, out_std=0.01)
         self.critic = build_mlp(self.cnn_feature_dim, 1, hidden_critic, out_std=1.0)
@@ -88,28 +101,3 @@ class ACAgentCNN(ACAgent):
         return action, probs.log_prob(action), probs.entropy(), self.critic(features)
 
 
-class CNNEncoder(nn.Module):
-    def __init__(self, input_channels: int = 3, feature_dim: int =256):
-        super().__init__()
-        self.conv = nn.Sequential(
-            nn.Conv2d(input_channels, 32, kernel_size=8, stride=4),
-            nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=4, stride=2),
-            nn.ReLU(),
-            nn.Conv2d(64, 64, kernel_size=3, stride=1),
-            nn.ReLU(),
-            # nn.Flatten()
-        )
-        # adaptive pool -> always outputs (B, 64, 1, 1)
-        self.global_pool = nn.AdaptiveAvgPool2d((1, 1))
-
-        # final linear from conv channels -> feature_dim
-        self.fc = nn.Linear(64, feature_dim)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # x: [B, C, H, W], float
-        x = self.conv(x)
-        x = self.global_pool(x)      # [B, 64, 1, 1]
-        x = x.view(x.size(0), -1)    # [B, 64]
-        x = self.fc(x)               # [B, feature_dim]
-        return F.relu(x)

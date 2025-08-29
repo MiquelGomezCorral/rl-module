@@ -4,6 +4,8 @@ import gymnasium as gym
 
 from src.config import Configuration
 
+import ale_py
+gym.register_envs(ale_py)
 
 def get_shape_from_envs(envs: gym.Env) -> tuple:
     """Given the vectorized envs object, return the shape
@@ -16,25 +18,9 @@ def get_shape_from_envs(envs: gym.Env) -> tuple:
             - State shape
             - Actions shape
     """
-    obs_space = envs.single_observation_space
-    act_space = envs.single_action_space
+    return envs.single_observation_space.shape, envs.single_action_space.n
 
-    # Handle Dict observation spaces (e.g., VizDoom 'screen')
-    if isinstance(obs_space, gym.spaces.Dict):
-        # pick the 'screen' key for CNN input
-        obs_shape = obs_space['screen'].shape
-    else:
-        obs_shape = obs_space.shape
-
-    # Handle Discrete or Box action spaces
-    if hasattr(act_space, "n"):
-        action_shape = act_space.n
-    else:
-        action_shape = act_space.shape[0]
-
-    return obs_shape, action_shape
-
-def handle_states(CONFIG: Configuration, obs: Any) -> torch.Tensor:
+def handle_states(CONFIG: Configuration, states: Any) -> torch.Tensor:
     """Convert environment observations to a PyTorch tensor on the correct device.
 
     Handles both raw arrays and dict observations (e.g., ViZDoom) by extracting
@@ -43,22 +29,12 @@ def handle_states(CONFIG: Configuration, obs: Any) -> torch.Tensor:
 
     Args:
         CONFIG (Configuration): Configuration object containing device info.
-        obs (Any): Observation from the environment, can be a numpy array or a dict.
+        state (Any): Observation from the environment, can be a numpy array or a dict.
 
     Returns:
         torch.Tensor: Observation tensor ready for model input, on CONFIG.device.
     """
-    if isinstance(obs, dict):
-        obs = obs['screen']  # use the image part for CNN input
-    obs = torch.as_tensor(obs, dtype=torch.float32, device=CONFIG.device)
-
-    if CONFIG.convolutional:
-        if obs.ndim == 4 and obs.shape[-1] in (1, 3):
-            obs = obs.permute(0, 3, 1, 2)  # -> [N,C,H,W]
-        else:
-            raise ValueError(f"handle_states expected batched NHWC image, got {obs.shape}")
-
-    return obs
+    return torch.Tensor(states).to(CONFIG.device)
 
 
 def get_envs(CONFIG: Configuration, evaluating: bool = False) -> gym.vector.SyncVectorEnv:
@@ -109,6 +85,11 @@ def create_env(CONFIG: Configuration, idx: int, evaluating: bool = False) -> gym
             fps=CONFIG.fps,
             name_prefix=f"env{idx}"
         )
+
+    if CONFIG.convolutional:
+        env = gym.wrappers.GrayscaleObservation(env)
+        env = gym.wrappers.ResizeObservation(env, shape=(84, 84))
+        env = gym.wrappers.FrameStackObservation(env, 4)
 
     # NOTE: This seeds are different from the code seeds and are different for different envs
     seed = CONFIG.seed + idx 

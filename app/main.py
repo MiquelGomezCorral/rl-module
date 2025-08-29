@@ -53,8 +53,8 @@ def parse_args_config():
         help="Total number of sub envs for the experiment"
     )
     p_ppo_train.add_argument(
-        "-ch", "--use_checkpoint", action='store_true', default=False,
-        help="if toggled (-ch), try to resume the training from a saved checkpoint."
+        "-ch", "--use_checkpoint", action='store_false', default=True,
+        help="if toggled (-ch), do not try to resume the training from a saved checkpoint."
     )
     p_ppo_train.add_argument(
         "-lk", "--keep_last_k", type=int, default=2,
@@ -62,7 +62,7 @@ def parse_args_config():
     )
      
     p_ppo_train.add_argument(
-        "-es", "--n_eval_steps", type=int, default=20_000,
+        "-es", "--n_eval_steps", type=int, default=2_500,
         help="Total number steps to evaluate the agent"
     )
 

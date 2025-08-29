@@ -29,10 +29,6 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
     # envs = create_env(CONFIG)
     envs = get_envs(CONFIG)
     state_shape, action_shape = get_shape_from_envs(envs)
-    if hasattr(envs.single_action_space, "n"):
-        action_shape_tuple = ()           # discrete scalar actions -> shape (-1,)
-    else:
-        action_shape_tuple = tuple(action_shape)
     # ================================================================
     #                           AGENT & VARS
     # ================================================================
@@ -58,10 +54,7 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
 
     # ================== VARS ==================
     # Store setup
-    if not CONFIG.convolutional:
-        states = torch.zeros((CONFIG.n_steps, CONFIG.n_envs) + (agent.state_space,)).to(CONFIG.device)
-    else:
-        states = torch.zeros((CONFIG.n_steps, CONFIG.n_envs) + next_states.shape[1:], device=CONFIG.device)
+    states = torch.zeros((CONFIG.n_steps, CONFIG.n_envs) + state_shape).to(CONFIG.device)
     actions  = torch.zeros((CONFIG.n_steps, CONFIG.n_envs)).to(CONFIG.device)
     logprobs = torch.zeros((CONFIG.n_steps, CONFIG.n_envs)).to(CONFIG.device)
     rewards  = torch.zeros((CONFIG.n_steps, CONFIG.n_envs)).to(CONFIG.device)
@@ -148,16 +141,8 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
 
         # 4. flatten the batch
         b_states = states.reshape((-1,) + state_shape)
-        if CONFIG.convolutional:
-            # convert NHWC -> NCHW if last dim is channels
-            if b_states.ndim == 4 and b_states.shape[-1] in (1, 3):
-                b_states = b_states.permute(0, 3, 1, 2).contiguous()
-            else:
-                raise ValueError(f"Expected NHWC batched images, got {b_states.shape}")
-        b_states = b_states.to(dtype=torch.float32, device=CONFIG.device)
-
         b_logprobs   = logprobs.reshape(-1)
-        b_actions    = actions.reshape((-1,) + action_shape_tuple)
+        b_actions    = actions.reshape((-1, action_shape))
         b_advantages = advantages.reshape(-1)
         b_returns    = returns.reshape(-1)
         b_values     = values.reshape(-1)
