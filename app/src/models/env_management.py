@@ -2,8 +2,6 @@ import torch
 from typing import Any
 import gymnasium as gym
 
-from vizdoom import gymnasium_wrapper
-
 from src.config import Configuration
 
 

@@ -7,8 +7,7 @@ from maikol_utils.print_utils import print_separator
 from maikol_utils.time_tracker import print_time
 
 from src.config import Configuration
-from src.models.agent import ACAgent
-from src.models.env_management import get_envs, handle_states
+from src.models import ACAgent, get_envs, handle_states
 
 
 def evaluate_agent(agent: ACAgent, CONFIG: Configuration) -> tuple[float, float]:

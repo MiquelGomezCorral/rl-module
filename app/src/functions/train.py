@@ -11,7 +11,7 @@ import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 
 from src.config import Configuration
-from src.models.env_management import get_envs, handle_states, get_shape_from_envs
+from src.models import get_envs, handle_states, get_shape_from_envs
 from src.utils import save_agent, load_checkpoint, save_checkpoint, get_agent_from_config
 
 

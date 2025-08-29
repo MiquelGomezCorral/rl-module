@@ -3,7 +3,7 @@
 Manage files to evaluate PPO models
 """
 
-from src.models import evaluate_agent
+from src.functions import evaluate_agent
 from src.utils import load_agent, set_seed
 
 from src.config import Configuration

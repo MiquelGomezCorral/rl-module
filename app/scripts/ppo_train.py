@@ -1,7 +1,6 @@
-from src.models import train_ppo, evaluate_agent
+from src.functions import train_ppo, evaluate_agent
 from src.utils import set_seed, start_wandb_tensorboard
 from src.config import Configuration
-from src.models import train_ppo, evaluate_agent
 
 from maikol_utils.file_utils import clear_directories, make_dirs
 from maikol_utils.print_utils import print_separator

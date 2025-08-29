@@ -3,9 +3,7 @@ import torch
 from typing import Any
 import gymnasium as gym
 
-from src.models.agent import ACAgent
-from src.models.agent_cnn import ACAgentCNN
-from src.models.env_management import get_envs, get_shape_from_envs
+from src.models import ACAgent, ACAgentCNN, get_envs, get_shape_from_envs
 from src.config import Configuration
 
 from maikol_utils.file_utils import list_dir_files, make_dirs
