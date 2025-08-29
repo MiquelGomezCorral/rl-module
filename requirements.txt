@@ -1,8 +1,11 @@
 app==0.1.0
-gymnasium==1.2.0
+box2d==2.3.10
+ipykernel==6.30.1
 maikol-utils==0.6.4
+moviepy==2.2.1
 pip-chill==1.0.3
-torch==2.8.0
-tqdm==4.67.1
+pygame==2.6.1
+sample-factory==2.1.1
+seaborn==0.13.2
 uv==0.8.13
-wandb==0.21.1
+wasabi==1.1.3
