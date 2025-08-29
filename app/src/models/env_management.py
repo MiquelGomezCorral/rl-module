@@ -97,7 +97,7 @@ def create_env(CONFIG: Configuration, idx: int, evaluating: bool = False) -> gym
         gym.Env: Created env for CONFIG.gym_id env
     """
     env = gym.make(
-        CONFIG.gym_id, 
+        CONFIG.env_id, 
         render_mode = "rgb_array" if CONFIG.record_video else None
     )
     env = gym.wrappers.RecordEpisodeStatistics(env)

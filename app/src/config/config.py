@@ -19,7 +19,7 @@ class Configuration:
     fps:             int = 30
     n_eval_steps:    int = 20_000
 
-    gym_id:          str = "CartPole-v1"
+    env_id:          str = "CartPole-v1"
     n_envs:          int = 4
     eps:           float = 1e-5 # DO NOT TOUCH! is for the algorithm, is not even in the args ;)
     learning_rate: float = 2.5e-4

@@ -78,7 +78,7 @@ def parse_args_config():
 
     # ===================== ENV =====================
     p_ppo_train.add_argument(
-        "-id", "--gym_id", type=str, default="CartPole-v1",
+        "-id", "--env_id", type=str, default="CartPole-v1",
         help="The id of the gym environment"
     )
     
@@ -184,7 +184,7 @@ def parse_args_config():
     )
 
     p_ppo_eval.add_argument(
-        "-id", "--gym_id", type=str, default="CartPole-v1",
+        "-id", "--env_id", type=str, default="CartPole-v1",
         help="The id of the gym environment"
     )
     p_ppo_eval.add_argument(

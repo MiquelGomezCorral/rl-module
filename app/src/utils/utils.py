@@ -30,7 +30,7 @@ def set_seed(seed: int, torch_deterministic: bool = None):
 # =================================================================================
 def start_wandb_tensorboard(CONFIG: Configuration) -> SummaryWriter:
     """Manage wandb and tensorbard configuration and setup"""
-    run_name = f"{CONFIG.gym_id}__{CONFIG.exp_name}__{CONFIG.seed}__{int(time())}"
+    run_name = f"{CONFIG.env_id}__{CONFIG.exp_name}__{CONFIG.seed}__{int(time())}"
     if CONFIG.track_run:
         import wandb
 
