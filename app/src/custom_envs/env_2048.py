@@ -2,12 +2,14 @@
 
 Environment for 2048 game made with gymnassium.
 """
-
+from typing import Tuple
 from gymnasium import Env
 from gymnasium.spaces import Discrete, Box
 
 import numpy as np
-
+import pygame
+import math
+import colorsys
 
 """Notes
 Rules
@@ -31,9 +33,9 @@ Objective:
     - Get a square with 2048 as value.
 """
 
-
-
 class Env2048(Env):
+    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
+
     def __init__(
         self, 
         grid_size: tuple = (4,4),
@@ -43,7 +45,8 @@ class Env2048(Env):
         eight_box_spawn_rate: float = 0.00,
         initial_boxes: int = 2,
         new_boxes_per_step: int = 1,
-        seed: int = 42
+        seed: int = 42,
+        render_mode: str= None#"rgb_array"
     ):
         """
         Initialize a 2048 game environment.
@@ -85,10 +88,32 @@ class Env2048(Env):
 
         assert new_boxes_per_step > 0, "Every step at least one new box must be added. new_boxes_per_step > 0."
 
+        assert render_mode is None or render_mode in self.metadata["render_modes"]
         # =========================================================================================
-        #                                           Seeds
+        #                                     Seeds and variables
         # =========================================================================================
         self.manage_seed(seed)
+        self.window_size = 512
+        self.render_mode = render_mode
+        self.background_color = (255, 240, 206)
+
+        self.grid_size = grid_size
+        self.pix_square_size = (
+            self.window_size / self.grid_size[0], 
+            self.window_size / self.grid_size[1], 
+        )# The size of a single grid square in pixels
+        self.font_size = int(self.pix_square_size[0] * 0.6) or 12
+
+
+        """
+        If human-rendering is used, `self.window` will be a reference
+        to the window that we draw to. `self.clock` will be a clock that is used
+        to ensure that the environment is rendered at the correct framerate in
+        human-mode. They will remain `None` until human-mode is used for the
+        first time.
+        """
+        self.window = None
+        self.clock = None
         # =========================================================================================
         #                                       Action space
         # =========================================================================================
@@ -110,7 +135,7 @@ class Env2048(Env):
             
         self.dtype = dtype
 
-        self.grid_size = grid_size
+        self.grid = np.zeros(self.grid_size, dtype=int)
         self.w_range = np.arange(grid_size[0])
         self.h_range = np.arange(grid_size[1])
         self.observation_space = Box(
@@ -188,22 +213,37 @@ class Env2048(Env):
         # =========================================================================================
         #                                        INFO & RETURN
         # =========================================================================================
+        if self.render_mode == "human":
+            self._render_frame()
+
         info = {"left_steps": self.left_steps}
         return self.state, self.reward, terminated, truncated, info
 
     def render(self):
-        pass
+        """Return an image of the current grid."""
+        # elif self.render_mode != "rgb_array":
+            # raise NotImplementedError("Only 'rgb_array' render mode is supported.")
+        if self.render_mode == "rgb_array":
+            return self._render_frame()
+
 
     def reset(self, seed: int | None = None, options: dict | None = None):
+        super().reset(seed=seed)
+
         self.manage_seed(seed)
         # Reset state
+        self.grid[:] = 0
+        self.reward = 0
         self.state = np.zeros(self.grid_size, dtype=self.dtype)
         self.left_steps = self.max_steps
 
         # Add initial_boxes new values
         self._add_new_boxes(n_boxes=self.initial_boxes)
-        
         info = {"left_steps": self.left_steps}
+
+        if self.render_mode == "human":
+            self._render_frame()
+
         return self.state, info
     
     def manage_seed(self, seed: int | None = None):
@@ -384,3 +424,148 @@ class Env2048(Env):
                         self.state[x, y] = 0
                     else: # No nothing. The cell can't move. 
                         ... 
+
+    def _render_frame(self):
+        # ================================================================
+        #                            BASIC RENDER
+        # ================================================================
+        if self.window is None and self.render_mode == "human":
+            pygame.init()
+            pygame.display.init()
+            self.window = pygame.display.set_mode(
+                (self.window_size, self.window_size)
+            )
+        if self.clock is None and self.render_mode == "human":
+            self.clock = pygame.time.Clock()
+        canvas = pygame.Surface((self.window_size, self.window_size), pygame.SRCALPHA)
+
+
+        # TODO: Background color
+        canvas.fill()
+        # ================================================================
+        #                        TODO: COMPLEX RENDER
+        # ================================================================
+        # =============== GRID ===============
+        for x in self.w_range:
+            pygame.draw.line(
+                canvas,
+                (255,255,255),
+                (self.pix_square_size[0] * x, 0),
+                (self.pix_square_size[0] * x, self.window_size),
+                width=4,
+            )
+        for y in self.h_range:
+            pygame.draw.line(
+                canvas,
+                (255,255,255),
+                (0, self.pix_square_size[1] * y),
+                (self.window_size, self.pix_square_size[1] * y),
+                width=4,
+            )
+            
+
+        # =============== FONT ===============
+        if not hasattr(self, "_render_font") or self._render_font is None:
+            # pick font size from pix sizes; ensure int and >0
+            pix_w = self.pix_square_size[0]
+            pix_h = self.pix_square_size[1]
+            fs = max(8, int(min(pix_w, pix_h) * 0.5))
+            pygame.font.init()  # defensive
+            self._render_font = pygame.font.SysFont(None, fs)
+
+        font = self._render_font
+
+        # =============== NUMBERS ===============
+
+        for x in self.w_range:
+            for y in self.h_range:
+                number = self.state[x, y]
+                text_surf = font.render(
+                    str(number), 
+                    True, 
+                    (0, 0, 0) if number > 0 else self.background_color # black text but transparent if 0
+                )  
+
+                ori_x, ori_y = self.pix_square_size[0]*x, self.pix_square_size[1]*y
+
+                cell_rect = pygame.Rect(
+                    (ori_x, ori_y),
+                    (self.pix_square_size[0] - 1, self.pix_square_size[1] - 1),
+                )
+
+                pygame.draw.rect(canvas, self.tile_color(number), cell_rect, width=0)
+                text_rect = text_surf.get_rect(center=cell_rect.center)
+                canvas.blit(text_surf, text_rect)
+                    
+
+        # ================================================================
+        #                        FINAL PIXEL MANAGEMENT
+        # ================================================================
+        if self.render_mode == "human":
+            # The following line copies our drawings from `canvas` to the visible window
+            self.window.blit(canvas, canvas.get_rect())
+            pygame.event.pump()
+            pygame.display.update()
+
+            # We need to ensure that human-rendering occurs at the predefined framerate.
+            # The following line will automatically add a delay to keep the framerate stable.
+            self.clock.tick(self.metadata["render_fps"])
+        else:  # rgb_array
+            return np.transpose(
+                np.array(pygame.surfarray.pixels3d(canvas)), axes=(1, 0, 2)
+            )
+        
+    def tile_color(
+        self,
+        value: int,
+        tone: Tuple[int, int, int] = (246, 140, 30),
+    ) -> Tuple[int, int, int, int]:
+        """
+        Map a tile value -> (R, G, B, A) pygame color.
+
+        Args:
+            value: the tile value (0..objective). 0 returns fully transparent.
+            objective: maximum/target value (e.g., 2048).
+            tone: base RGB tone (0-255) used as hue/saturation reference.
+
+        Returns:
+            (r,g,b,a) with ints in 0..255. For value==0 returns (0,0,0,0).
+        """
+        objective = self.objective
+        # Transparent for empty cells
+        if value is None or value == 0:
+            return self.background_color
+
+        # Guard objective and value
+        if objective <= 1:
+            objective = max(2, objective)
+        value = max(1, int(value))
+
+        # Normalized log scale [0..1]
+        try:
+            ratio = math.log2(value) / math.log2(objective)
+        except ValueError:
+            ratio = 0.0
+        ratio = max(0.0, min(1.0, ratio))
+
+        # Convert tone to hsv (0..1)
+        tr, tg, tb = [c / 255.0 for c in tone]
+        h_base, s_base, v_base = colorsys.rgb_to_hsv(tr, tg, tb)
+
+        # Interpolation parameters (tweak these if you want different ramp)
+        s_min = 0.15           # saturation at lowest tiles (very desaturated)
+        v_max = 0.95           # brightness at lowest tiles (very bright background)
+        v_min = 0.35           # brightness near objective (darker)
+
+        # Interpolate saturation and value (brightness)
+        s = s_min + (s_base - s_min) * ratio
+        v = v_max + (v_min - v_max) * ratio  # moves from v_max -> v_min as ratio -> 1
+
+        # Convert back to rgb (0..255)
+        r_f, g_f, b_f = colorsys.hsv_to_rgb(h_base, s, v)
+        r, g, b = int(round(r_f * 255)), int(round(g_f * 255)), int(round(b_f * 255))
+
+        # alpha: fully opaque for tiles, but you can make it depend on ratio if you like
+        a = 255
+
+        return (r, g, b, a)

@@ -13,12 +13,15 @@ CUSTOM_MODELS_LIST = {
     "Env2048": Env2048,
 }
 def make_env_with_customs(CONFIG: Configuration):
+    render_mode = "rgb_array" if CONFIG.record_video else None
     if CONFIG.env_id in CUSTOM_MODELS_LIST:
-        return CUSTOM_MODELS_LIST[CONFIG.env_id]()
+        return CUSTOM_MODELS_LIST[CONFIG.env_id](
+            render_mode = render_mode
+        )
     
     return gym.make(
         CONFIG.env_id, 
-        render_mode = "rgb_array" if CONFIG.record_video else None
+        render_mode = render_mode
     )
 
 def get_shape_from_envs(envs: gym.Env) -> tuple:
