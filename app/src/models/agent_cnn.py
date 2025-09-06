@@ -86,9 +86,6 @@ class ACAgentCNN(ACAgent):
         if torch.isnan(x).any() or torch.isinf(x).any():
             raise RuntimeError("NaN or Inf in observation tensor (forward_features)")
 
-        # debug: shapes and ranges (remove or guard with a DEBUG flag)
-        print("forward_features: shape", tuple(x.shape), "dtype", x.dtype, "min,max",
-            float(x.min()), float(x.max()))
         return self.cnn(x / 255.0)  # normalize pixels
     
     def get_value(self, state: torch.Tensor):

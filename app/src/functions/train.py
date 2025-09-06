@@ -142,13 +142,15 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
         # 4. flatten the batch
         b_states = states.reshape((-1,) + state_shape)
         b_logprobs   = logprobs.reshape(-1)
-        b_actions    = actions.reshape((-1, action_shape))
+        # b_actions    = actions.reshape((-1, action_shape))
+        b_actions    = actions.reshape(-1)
         b_advantages = advantages.reshape(-1)
         b_returns    = returns.reshape(-1)
         b_values     = values.reshape(-1)
 
         # 5. Minibaches
-        b_ids = np.arange(CONFIG.batch_size)
+        # b_ids = np.arange(CONFIG.batch_size)
+        b_ids = np.arange(b_states.shape[0])
         clip_fracs = []
         for epoch in range(CONFIG.update_epochs):
             np.random.shuffle(b_ids)
