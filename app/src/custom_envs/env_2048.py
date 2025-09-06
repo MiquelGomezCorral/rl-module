@@ -43,6 +43,7 @@ class Env2048(Env):
         eight_box_spawn_rate: float = 0.00,
         initial_boxes: int = 2,
         new_boxes_per_step: int = 1,
+        seed: int = 42
     ):
         """
         Initialize a 2048 game environment.
@@ -84,12 +85,15 @@ class Env2048(Env):
 
         assert new_boxes_per_step > 0, "Every step at least one new box must be added. new_boxes_per_step > 0."
 
-
+        # =========================================================================================
+        #                                           Seeds
+        # =========================================================================================
+        self.manage_seed(seed)
         # =========================================================================================
         #                                       Action space
         # =========================================================================================
         # 0 Left, 1 Up, 2 right, 3 down
-        self.actions_space = Discrete(4)
+        self.action_space = Discrete(4)
     
 
         # =========================================================================================
@@ -159,13 +163,14 @@ class Env2048(Env):
         # =========================================================================================
         #                                        MAKE MOVEMENT
         # =========================================================================================
-        self.make_movement(action)
+        self._make_movement(action)
+
         # =========================================================================================
         #                                  ADD NEW BOX & CHECK LOST
         # =========================================================================================
         # if not enough values can be added -> lost
         try:
-            self.add_new_boxes(n_boxes=self.new_boxes_per_step)
+            self._add_new_boxes(n_boxes=self.new_boxes_per_step)
         except ValueError:
             terminated = True
 
@@ -175,29 +180,43 @@ class Env2048(Env):
 
         if not truncated and not terminated:
             # Time step alive
-            self.update_reward(1)
+            self._update_reward(1)
         else:
-            self.update_reward(self.objective)
+            self._update_reward(self.objective)
 
 
         # =========================================================================================
         #                                        INFO & RETURN
         # =========================================================================================
-        info = {}
+        info = {"left_steps": self.left_steps}
         return self.state, self.reward, terminated, truncated, info
 
     def render(self):
         pass
 
-    def reset(self):
+    def reset(self, seed: int | None = None, options: dict | None = None):
+        self.manage_seed(seed)
         # Reset state
         self.state = np.zeros(self.grid_size, dtype=self.dtype)
+        self.left_steps = self.max_steps
+
         # Add initial_boxes new values
-        self.add_new_boxes(n_boxes=self.initial_boxes)
+        self._add_new_boxes(n_boxes=self.initial_boxes)
+        
+        info = {"left_steps": self.left_steps}
+        return self.state, info
+    
+    def manage_seed(self, seed: int | None = None):
+        """Set the seed to seed if passed, else ignore
 
-        return self.state
+        Args:
+            seed (int | None, optional): New seed. Defaults to None.
+        """
+        if seed is not None:
+            self.seed = seed
+            np.random.seed(seed)
 
-    def get_valid_positions(self) -> list[tuple[int,int]]:
+    def _get_valid_positions(self) -> list[tuple[int,int]]:
         """Create a list of tuples of those empty cells (value = 0) 
 
         Returns:
@@ -210,14 +229,14 @@ class Env2048(Env):
             if self.state[x,y] == 0
         ]
 
-    def add_new_boxes(self, n_boxes: int = 1) -> None:
+    def _add_new_boxes(self, n_boxes: int = 1) -> None:
         """Add n_boxes new values into valid positions.
 
         Args:
             n_boxes (int, optional): Number of new values. Defaults to 1.
         """
         self.left_steps = self.max_steps
-        positions = self.get_valid_positions()
+        positions = self._get_valid_positions()
 
         # sample n_boxes unique positions
         init_positions = np.random.choice(len(positions), size=n_boxes, replace=False)
@@ -231,7 +250,7 @@ class Env2048(Env):
             x, y = positions[pos]
             self.state[x, y] = init_vs[idx]
 
-    def update_reward(self, points: float):
+    def _update_reward(self, points: float):
         """Update reward based on the points normalizing by the objective
 
         Args:
@@ -239,7 +258,8 @@ class Env2048(Env):
         """
         self.reward += points / self.objective
 
-    def make_movement(self, action: int):
+
+    def _make_movement(self, action: int):
         """Update state making a movement
 
         Args:
@@ -263,7 +283,7 @@ class Env2048(Env):
                     
                     if last_eq is not None:
                         # Update points with the cell value
-                        self.update_reward(self.state[x, y])
+                        self._update_reward(self.state[x, y])
                         
                         # Merge the two equal cells and reset ours
                         self.state[last_eq, y] += self.state[x, y] # or *2
@@ -293,7 +313,7 @@ class Env2048(Env):
                     
                     if last_eq is not None:
                         # Update points with the cell value
-                        self.update_reward(self.state[x, y])
+                        self._update_reward(self.state[x, y])
                         
                         # Merge the two equal cells and reset ours
                         self.state[x, last_eq] += self.state[x, y] # or *2
@@ -323,7 +343,7 @@ class Env2048(Env):
                     
                     if last_eq is not None:
                         # Update points with the cell value
-                        self.update_reward(self.state[x, y])
+                        self._update_reward(self.state[x, y])
                         
                         # Merge the two equal cells and reset ours
                         self.state[last_eq, y] += self.state[x, y] # or *2
@@ -353,7 +373,7 @@ class Env2048(Env):
                     
                     if last_eq is not None:
                         # Update points with the cell value
-                        self.update_reward(self.state[x, y])
+                        self._update_reward(self.state[x, y])
                         
                         # Merge the two equal cells and reset ours
                         self.state[x, last_eq] += self.state[x, y] # or *2
