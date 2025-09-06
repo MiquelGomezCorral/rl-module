@@ -3,13 +3,10 @@
 Environment for 2048 game made with gymnassium.
 """
 
-import gymnasium as gym
 from gymnasium import Env
 from gymnasium.spaces import Discrete, Box
 
 import numpy as np
-import random
-
 
 
 """Notes
@@ -162,134 +159,7 @@ class Env2048(Env):
         # =========================================================================================
         #                                        MAKE MOVEMENT
         # =========================================================================================
-        if action == 0:
-            # skip first first column
-            for x in self.w_range[1:]:
-                for y in self.h_range:
-                    if self.state[x, y] == 0:
-                        continue
-                    
-                    last_0, last_eq = None, None
-                    for xx in self.w_range[x-1::-1]: # loop in inverse order from current col to first
-                        if self.state[xx, y] == 0:
-                            last_0 = xx
-                        else:
-                            if self.state[xx, y] == self.state[x, y]: 
-                                last_eq = xx
-                            break # found an obstacle
-                    
-                    if last_eq is not None:
-                        # Update points with the cell value
-                        self.update_reward(self.state[x, y])
-                        
-                        # Merge the two equal cells and reset ours
-                        self.state[last_eq, y] += self.state[x, y] # or *2
-                        self.state[x, y] = 0
-                    elif last_0 is not None:
-                        # Move our cell and reset previous position
-                        self.state[last_0, y] += self.state[x, y] # or *2
-                        self.state[x, y] = 0
-                    else:
-                        # No nothing. The cell can't move. example: the for in | 2, 4, 0 ,0 |
-                        # The left is nor a 4 nor a 0, cant move
-                        ... 
-
-        elif action == 1:
-             # skip first first row
-            for y in self.h_range[1:]:
-                for x in self.w_range:
-                    if self.state[x, y] == 0:
-                        continue
-                    
-                    last_0, last_eq = None, None
-                    for yy in self.h_range[y-1::-1]: # loop in inverse order from current col to first
-                        if self.state[x, yy] == 0:
-                            last_0 = yy
-                        else:
-                            if self.state[x, yy] == self.state[x, y]: 
-                                last_eq = yy
-                            break # found an obstacle
-                    
-                    if last_eq is not None:
-                        # Update points with the cell value
-                        self.update_reward(self.state[x, y])
-                        
-                        # Merge the two equal cells and reset ours
-                        self.state[x, last_eq] += self.state[x, y] # or *2
-                        self.state[x, y] = 0
-                    elif last_0 is not None:
-                        # Move our cell and reset previous position
-                        self.state[x, last_0] += self.state[x, y] # or *2
-                        self.state[x, y] = 0
-                    else:
-                        # No nothing. The cell can't move. example: the for in | 2, 4, 0 ,0 |
-                        # The left is nor a 4 nor a 0, cant move
-                        ... 
-
-        elif action == 2:
-            # skip first last column
-            for x in self.w_range[-2::-1]:
-                for y in self.h_range:
-                    if self.state[x, y] == 0:
-                        continue
-                    
-                    last_0, last_eq = None, None
-                    for xx in self.w_range[x+1:]: # loop in inverse order from current col to first
-                        if self.state[xx, y] == 0:
-                            last_0 = xx
-                        else:
-                            if self.state[xx, y] == self.state[x, y]: 
-                                last_eq = xx
-                            break # found an obstacle
-                    
-                    if last_eq is not None:
-                        # Update points with the cell value
-                        self.update_reward(self.state[x, y])
-                        
-                        # Merge the two equal cells and reset ours
-                        self.state[last_eq, y] += self.state[x, y] # or *2
-                        self.state[x, y] = 0
-                    elif last_0 is not None:
-                        # Move our cell and reset previous position
-                        self.state[last_0, y] += self.state[x, y] # or *2
-                        self.state[x, y] = 0
-                    else:
-                        # No nothing. The cell can't move. example: the for in | 2, 4, 0 ,0 |
-                        # The left is nor a 4 nor a 0, cant move
-                        ... 
-        
-        elif action == 3:
-             # skip first last row
-            for y in self.h_range[-2::-1]:
-                for x in self.w_range:
-                    if self.state[x, y] == 0:
-                        continue
-                    
-                    last_0, last_eq = None, None
-                    for yy in self.h_range[y+1:]: # loop in inverse order from current col to first
-                        if self.state[x, yy] == 0:
-                            last_0 = yy
-                        else:
-                            if self.state[x, yy] == self.state[x, y]: 
-                                last_eq = yy
-                            break # found an obstacle
-                    
-                    if last_eq is not None:
-                        # Update points with the cell value
-                        self.update_reward(self.state[x, y])
-                        
-                        # Merge the two equal cells and reset ours
-                        self.state[x, last_eq] += self.state[x, y] # or *2
-                        self.state[x, y] = 0
-                    elif last_0 is not None:
-                        # Move our cell and reset previous position
-                        self.state[x, last_0] += self.state[x, y] # or *2
-                        self.state[x, y] = 0
-                    else:
-                        # No nothing. The cell can't move. example: the for in | 2, 4, 0 ,0 |
-                        # The left is nor a 4 nor a 0, cant move
-                        ... 
-
+        self.make_movement(action)
         # =========================================================================================
         #                                  ADD NEW BOX & CHECK LOST
         # =========================================================================================
@@ -361,5 +231,136 @@ class Env2048(Env):
             x, y = positions[pos]
             self.state[x, y] = init_vs[idx]
 
-    def update_reward(self, points):
+    def update_reward(self, points: float):
+        """Update reward based on the points normalizing by the objective
+
+        Args:
+            points (float): To add points
+        """
         self.reward += points / self.objective
+
+    def make_movement(self, action: int):
+        """Update state making a movement
+
+        Args:
+            action (int): Action in 0,1,2,3
+        """
+        if action == 0:
+            # skip first first column
+            for x in self.w_range[1:]:
+                for y in self.h_range:
+                    if self.state[x, y] == 0:
+                        continue
+                    
+                    last_0, last_eq = None, None
+                    for xx in self.w_range[x-1::-1]: # loop in inverse order from current col to first
+                        if self.state[xx, y] == 0:
+                            last_0 = xx
+                        else:
+                            if self.state[xx, y] == self.state[x, y]: 
+                                last_eq = xx
+                            break # found an obstacle
+                    
+                    if last_eq is not None:
+                        # Update points with the cell value
+                        self.update_reward(self.state[x, y])
+                        
+                        # Merge the two equal cells and reset ours
+                        self.state[last_eq, y] += self.state[x, y] # or *2
+                        self.state[x, y] = 0
+                    elif last_0 is not None:
+                        # Move our cell and reset previous position
+                        self.state[last_0, y] += self.state[x, y] # or *2
+                        self.state[x, y] = 0
+                    else: # No nothing. The cell can't move. 
+                        ... 
+
+        elif action == 1:
+             # skip first first row
+            for y in self.h_range[1:]:
+                for x in self.w_range:
+                    if self.state[x, y] == 0:
+                        continue
+                    
+                    last_0, last_eq = None, None
+                    for yy in self.h_range[y-1::-1]: # loop in inverse order from current col to first
+                        if self.state[x, yy] == 0:
+                            last_0 = yy
+                        else:
+                            if self.state[x, yy] == self.state[x, y]: 
+                                last_eq = yy
+                            break # found an obstacle
+                    
+                    if last_eq is not None:
+                        # Update points with the cell value
+                        self.update_reward(self.state[x, y])
+                        
+                        # Merge the two equal cells and reset ours
+                        self.state[x, last_eq] += self.state[x, y] # or *2
+                        self.state[x, y] = 0
+                    elif last_0 is not None:
+                        # Move our cell and reset previous position
+                        self.state[x, last_0] += self.state[x, y] # or *2
+                        self.state[x, y] = 0
+                    else: # No nothing. The cell can't move. 
+                        ... 
+
+        elif action == 2:
+            # skip first last column
+            for x in self.w_range[-2::-1]:
+                for y in self.h_range:
+                    if self.state[x, y] == 0:
+                        continue
+                    
+                    last_0, last_eq = None, None
+                    for xx in self.w_range[x+1:]: # loop in inverse order from current col to first
+                        if self.state[xx, y] == 0:
+                            last_0 = xx
+                        else:
+                            if self.state[xx, y] == self.state[x, y]: 
+                                last_eq = xx
+                            break # found an obstacle
+                    
+                    if last_eq is not None:
+                        # Update points with the cell value
+                        self.update_reward(self.state[x, y])
+                        
+                        # Merge the two equal cells and reset ours
+                        self.state[last_eq, y] += self.state[x, y] # or *2
+                        self.state[x, y] = 0
+                    elif last_0 is not None:
+                        # Move our cell and reset previous position
+                        self.state[last_0, y] += self.state[x, y] # or *2
+                        self.state[x, y] = 0
+                    else: # No nothing. The cell can't move. 
+                        ... 
+        
+        elif action == 3:
+             # skip first last row
+            for y in self.h_range[-2::-1]:
+                for x in self.w_range:
+                    if self.state[x, y] == 0:
+                        continue
+                    
+                    last_0, last_eq = None, None
+                    for yy in self.h_range[y+1:]: # loop in inverse order from current col to first
+                        if self.state[x, yy] == 0:
+                            last_0 = yy
+                        else:
+                            if self.state[x, yy] == self.state[x, y]: 
+                                last_eq = yy
+                            break # found an obstacle
+                    
+                    if last_eq is not None:
+                        # Update points with the cell value
+                        self.update_reward(self.state[x, y])
+                        
+                        # Merge the two equal cells and reset ours
+                        self.state[x, last_eq] += self.state[x, y] # or *2
+                        self.state[x, y] = 0
+                    elif last_0 is not None:
+                        # Move our cell and reset previous position
+                        self.state[x, last_0] += self.state[x, y] # or *2
+                        self.state[x, y] = 0
+                    else: # No nothing. The cell can't move. 
+                        ... 
