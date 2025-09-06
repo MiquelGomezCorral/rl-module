@@ -21,7 +21,7 @@ Rules
         a “4” tile, two “4” tiles make an “8,” and so on.
         - After each move, a new tile appears on an empty spot on the grid with either a “2” or “4” value. 
         - When combining two blocks x and x you get x points / objective
-        - For each time step alive you get 1/objective points
+        - For each time step alive you get 1*number of empty cells / objective points
         - When no more movements can be done game losses -objective points
         - When a cell with objective value is reached you win objective points
         - Losses when 'new_boxes_per_step' boxes can't be added after the movement.
@@ -46,7 +46,7 @@ class Env2048(Env):
         initial_boxes: int = 2,
         new_boxes_per_step: int = 1,
         seed: int = 42,
-        render_mode: str= None#"rgb_array"
+        render_mode: str= None
     ):
         """
         Initialize a 2048 game environment.
@@ -189,6 +189,8 @@ class Env2048(Env):
         #                                        MAKE MOVEMENT
         # =========================================================================================
         self._make_movement(action)
+        # More points the more empty cells are there
+        self._update_reward(np.prod(self.grid_size) - len(self._get_valid_positions()))
 
         # =========================================================================================
         #                                  ADD NEW BOX & CHECK LOST
@@ -203,10 +205,7 @@ class Env2048(Env):
         self.left_steps -= 1
         truncated = self.left_steps <= 0
 
-        if not truncated and not terminated:
-            # Time step alive
-            self._update_reward(1)
-        else:
+        if truncated or terminated:
             self._update_reward(self.objective)
 
 
@@ -493,7 +492,7 @@ class Env2048(Env):
                     (self.pix_square_size[0] - 1, self.pix_square_size[1] - 1),
                 )
 
-                pygame.draw.rect(canvas, self.tile_color(number), cell_rect, width=0)
+                pygame.draw.rect(canvas, self._tile_color(number), cell_rect, width=0)
                 text_rect = text_surf.get_rect(center=cell_rect.center)
                 canvas.blit(text_surf, text_rect)
                     
@@ -515,7 +514,7 @@ class Env2048(Env):
                 np.array(pygame.surfarray.pixels3d(canvas)), axes=(1, 0, 2)
             )
         
-    def tile_color(
+    def _tile_color(
         self,
         value: int,
         tone: Tuple[int, int, int] = (246, 140, 30),
