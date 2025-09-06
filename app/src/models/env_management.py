@@ -83,7 +83,7 @@ def create_env(CONFIG: Configuration, idx: int, evaluating: bool = False) -> gym
             env, 
             video_folder=CONFIG.videos_path, 
             fps=CONFIG.fps,
-            name_prefix=f"env{idx}"
+            name_prefix=f"env{idx}{'-eval' if evaluating else ''}"
         )
 
     if CONFIG.convolutional:
