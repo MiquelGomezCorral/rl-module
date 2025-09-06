@@ -3,8 +3,7 @@ from typing import Any
 
 import torch
 import torch.nn as nn
-from torch.distributions.categorical import Categorical
-from torch.distributions.normal import Normal
+from torch.distributions import Categorical, Normal
 
 
 class ACAgent(nn.Module):
