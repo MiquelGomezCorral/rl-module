@@ -49,6 +49,7 @@ def save_agent(CONFIG: Configuration, agent: ACAgent) -> None:
         "action_space": agent.action_space,
         "hidden_actor": agent.hidden_actor,
         "hidden_critic": agent.hidden_critic,
+        "continuous": agent.continuous,
         "optimizer_state_dict": None,
         "update": None,
         "config": CONFIG,
@@ -90,6 +91,7 @@ def load_agent(CONFIG: Configuration, agent: ACAgent = None) -> ACAgent:
         agent = ACAgent(
             loaded_agent["state_space"],
             loaded_agent["action_space"],
+            loaded_agent["continuous"],
             loaded_agent["hidden_actor"],
             loaded_agent["hidden_critic"],
         ).to(CONFIG.device)
@@ -139,6 +141,7 @@ def save_checkpoint(
         "action_space": agent.action_space,
         "hidden_actor": agent.hidden_actor,
         "hidden_critic": agent.hidden_critic,
+        "continuous": agent.continuous,
         "optimizer_state_dict": optimizer.state_dict(),
         "update": update,
         "config": CONFIG,
@@ -177,6 +180,7 @@ def load_checkpoint(
     agent = ACAgent(
         checkpoint["state_space"],
         checkpoint["action_space"],
+        checkpoint["continuous"],
         checkpoint["hidden_actor"],
         checkpoint["hidden_critic"],
     ).to(CONFIG.device)
