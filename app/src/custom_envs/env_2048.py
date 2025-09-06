@@ -437,11 +437,11 @@ class Env2048(Env):
             )
         if self.clock is None and self.render_mode == "human":
             self.clock = pygame.time.Clock()
-        canvas = pygame.Surface((self.window_size, self.window_size), pygame.SRCALPHA)
+        canvas = pygame.Surface((self.window_size, self.window_size))
 
 
         # TODO: Background color
-        canvas.fill()
+        canvas.fill(self.background_color)
         # ================================================================
         #                        TODO: COMPLEX RENDER
         # ================================================================
