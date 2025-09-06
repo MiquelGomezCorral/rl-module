@@ -12,16 +12,21 @@ gym.register_envs(ale_py)
 CUSTOM_MODELS_LIST = {
     "Env2048": Env2048,
 }
-def make_env_with_customs(CONFIG: Configuration):
+def make_env_with_customs(CONFIG: Configuration) -> gym.Env:
+    """Instanciate the correct env depending if it a custom one or a gym built one
+
+    Args:
+        CONFIG (Configuration): Configuration
+
+    Returns:
+        gym.Env: Gym environment
+    """
     render_mode = "rgb_array" if CONFIG.record_video else None
-    if CONFIG.env_id in CUSTOM_MODELS_LIST:
-        return CUSTOM_MODELS_LIST[CONFIG.env_id](
-            render_mode = render_mode
-        )
     
-    return gym.make(
-        CONFIG.env_id, 
-        render_mode = render_mode
+    return (
+        CUSTOM_MODELS_LIST[CONFIG.env_id](render_mode = render_mode)
+        if CONFIG.env_id in CUSTOM_MODELS_LIST else
+        gym.make(CONFIG.env_id, render_mode = render_mode)
     )
 
 def get_shape_from_envs(envs: gym.Env) -> tuple:

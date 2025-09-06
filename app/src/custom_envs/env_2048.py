@@ -11,29 +11,50 @@ import pygame
 import math
 import colorsys
 
-"""Notes
-Rules
-    - 4x4 grid (defualt)
-    - Start: two tiles placed randomly on the grid, usually with values of either 2 or 4
-    - Gameplay: 
-        - When two tiles with the same number come together, they merge into a new 
-        tile that doubles the original number. For instance, two “2” tiles combine to make 
-        a “4” tile, two “4” tiles make an “8,” and so on.
-        - After each move, a new tile appears on an empty spot on the grid with either a “2” or “4” value. 
-        - When combining two blocks x and x you get x points / objective
-        - For each time step alive you get 1*number of empty cells / objective points
-        - When no more movements can be done game losses -objective points
-        - When a cell with objective value is reached you win objective points
-        - Losses when 'new_boxes_per_step' boxes can't be added after the movement.
-            Not enough empty cells
-  
 
-Objective:
-    - Merge equal value squares to double its value. 
-    - Get a square with 2048 as value.
-"""
 
 class Env2048(Env):
+    """Notes
+    Rules
+        - 4x4 grid (defualt)
+            - Then a sub space of this will be created for each one of the 4 possible movements
+            the space will have 5 x grid_size shape. 5 states: the current and 4 'into future pickups'.
+            [ # Current state
+                [[0,0],
+                [0,1]],
+
+                # State with movement to the left
+                [[0,0],
+                [1,0]],
+
+                # State with movement to the top
+                [[0,1],
+                [0,0]],
+
+                # State with movement to the right
+                [[0,0],
+                [0,1]],
+
+                # State with movement to the bottom
+                [[0,0],
+                [0,1]]
+            ] size = (5, 2, 2)
+        - Start: two tiles placed randomly on the grid, with values of either 2 or 4 or 8
+        - Gameplay: 
+            - When two tiles with the same number come together, they merge into a new 
+              tile that doubles the original number. For instance, two '2' tiles combine to make 
+              a '4' tile, two '4' tiles make an '8' and so on.
+              this movement gives x points, being x the number of the blocks that were combined
+            - After each move, a new tile appears on an empty spot on the grid with either a 2 or 4 or 8 value. 
+            - For each time step alive you get (1*number of empty cells / objective) points
+            - Losses when 'new_boxes_per_step' boxes can't be added after the movement.
+                When no more movements can be done game losses you get (-1) points
+                Not enough empty cells.
+    
+    Objective:
+        - Merge equal value squares to double its value. 
+        - Get a square with 2048 as value.
+    """
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
     def __init__(
@@ -119,7 +140,6 @@ class Env2048(Env):
         # =========================================================================================
         # 0 Left, 1 Up, 2 right, 3 down
         self.action_space = Discrete(4)
-    
 
         # =========================================================================================
         #                                         OBS
@@ -141,7 +161,7 @@ class Env2048(Env):
         self.observation_space = Box(
             low=0,
             high=objective,
-            shape=grid_size,
+            shape=(5, *grid_size), # Current state and the four new possibilities
             dtype=dtype
         )
         # =========================================================================================
@@ -177,37 +197,68 @@ class Env2048(Env):
 
         Returns:
             tuple: (observation, reward, terminated, truncated, info)
-                - observation: The next state of the environment.
+                - observation: np.ndarray. The next state of the environment.
+                    observation is a 5*grid_size tensor. For instance, for a 2x2 grid we will have:
+                    = [ # Current state
+                        [[0,0],
+                        [0,1]],
+
+                        # State with movement to the left
+                        [[0,0],
+                        [1,0]],
+
+                        # State with movement to the top
+                        [[0,1],
+                        [0,0]],
+
+                        # State with movement to the right
+                        [[0,0],
+                        [0,1]],
+
+                        # State with movement to the bottom
+                        [[0,0],
+                        [0,1]]
+                    ] with size = (5, 2, 2)
+
                 - reward: A floating-point value representing the reward received after executing the action.
                 - terminated: A boolean indicating whether the episode has ended due to the task being completed or failed.
                 - truncated: A boolean indicating whether the episode was truncated, typically due to a time limit being exceeded.
                 - info: A dictionary containing auxiliary diagnostic information, useful for debugging, learning, and logging.
         """
+        # Gym env variables
         self.reward, terminated, truncated = 0, False, False
-
         # =========================================================================================
         #                                        MAKE MOVEMENT
         # =========================================================================================
-        self._make_movement(action)
-        # More points the more empty cells are there
-        self._update_reward(np.prod(self.grid_size) - len(self._get_valid_positions()))
+        # Make movement
+        self.state[0] = self._make_movement(action, self.state[0])
 
         # =========================================================================================
-        #                                  ADD NEW BOX & CHECK LOST
+        #                               ADD NEW BOX & HECK LOST 
         # =========================================================================================
-        # if not enough values can be added -> lost
         try:
+            # if not enough values can be added ValueError -> lost
             self._add_new_boxes(n_boxes=self.new_boxes_per_step)
         except ValueError:
             terminated = True
 
+        # =========================================================================================
+        #                                     UPDATE NEW SUB STATES 
+        # =========================================================================================
+        # Update observations for parallel movements
+        self._update_sub_states()
+
+        # =========================================================================================
+        #                               UPDATE REWARDS FARTHER AND VARIABLES
+        # =========================================================================================
         # Reduce steps left
         self.left_steps -= 1
         truncated = self.left_steps <= 0
 
         if truncated or terminated:
-            self._update_reward(self.objective)
-
+            self._update_reward(- self.objective)
+         # More points the more empty cells are there
+        self._update_reward(np.prod(self.grid_size) - len(self._get_valid_positions()))
 
         # =========================================================================================
         #                                        INFO & RETURN
@@ -226,18 +277,54 @@ class Env2048(Env):
             return self._render_frame()
 
 
-    def reset(self, seed: int | None = None, options: dict | None = None):
+    def reset(self, seed: int | None = None, options: dict | None = None) -> tuple:
+        """Reset the environment, can be given a seed
+
+        Args:
+            seed (int | None, optional): Seed. Defaults to None.
+            options (dict | None, optional): Options (not in use). Defaults to None.
+
+        Returns:
+            tuple: 
+                - observation: np.ndarray. The next state of the environment.
+                    observation is a 5*grid_size tensor. For instance, for a 2x2 grid we will have:
+                    = [ # Current state
+                        [[0,0],
+                        [0,1]],
+
+                        # State with movement to the left
+                        [[0,0],
+                        [1,0]],
+
+                        # State with movement to the top
+                        [[0,1],
+                        [0,0]],
+
+                        # State with movement to the right
+                        [[0,0],
+                        [0,1]],
+
+                        # State with movement to the bottom
+                        [[0,0],
+                        [0,1]]
+                    ] with size = (5, 2, 2)
+             - info: dict
+        """
+        
         super().reset(seed=seed)
 
         self.manage_seed(seed)
         # Reset state
         self.grid[:] = 0
         self.reward = 0
-        self.state = np.zeros(self.grid_size, dtype=self.dtype)
+        self.state = np.zeros((5, *self.grid_size), dtype=self.dtype)
         self.left_steps = self.max_steps
 
         # Add initial_boxes new values
         self._add_new_boxes(n_boxes=self.initial_boxes)
+        # Update observations for parallel movements
+        self._update_sub_states()
+
         info = {"left_steps": self.left_steps}
 
         if self.render_mode == "human":
@@ -265,7 +352,7 @@ class Env2048(Env):
             (x, y) 
             for x in self.w_range 
             for y in self.h_range 
-            if self.state[x,y] == 0
+            if self.state[0, x,y] == 0
         ]
 
     def _add_new_boxes(self, n_boxes: int = 1) -> None:
@@ -284,10 +371,9 @@ class Env2048(Env):
         # sample n_boxes non-unique positions
         init_vs = np.random.choice(self.spawn_values, size=n_boxes, replace=True, p=self.spawn_probs)
 
-        # self.state[init_positions[:, 0], init_positions[:, 1]] = init_vs
         for idx, pos in enumerate(init_positions):
             x, y = positions[pos]
-            self.state[x, y] = init_vs[idx]
+            self.state[0, x, y] = init_vs[idx]
 
     def _update_reward(self, points: float):
         """Update reward based on the points normalizing by the objective
@@ -298,133 +384,147 @@ class Env2048(Env):
         self.reward += points / self.objective
 
 
-    def _make_movement(self, action: int):
+    def _make_movement(self, action: int, state: np.ndarray, update_reward: bool = True):
         """Update state making a movement
 
         Args:
             action (int): Action in 0,1,2,3
         """
+        state = state.copy()
         if action == 0:
             # skip first first column
             for x in self.w_range[1:]:
                 for y in self.h_range:
-                    if self.state[x, y] == 0:
+                    if state[x, y] == 0:
                         continue
                     
                     last_0, last_eq = None, None
                     for xx in self.w_range[x-1::-1]: # loop in inverse order from current col to first
-                        if self.state[xx, y] == 0:
+                        if state[xx, y] == 0:
                             last_0 = xx
                         else:
-                            if self.state[xx, y] == self.state[x, y]: 
+                            if state[xx, y] == state[x, y]: 
                                 last_eq = xx
                             break # found an obstacle
                     
                     if last_eq is not None:
                         # Update points with the cell value
-                        self._update_reward(self.state[x, y])
+                        if update_reward:
+                            self._update_reward(state[x, y])
                         
                         # Merge the two equal cells and reset ours
-                        self.state[last_eq, y] += self.state[x, y] # or *2
-                        self.state[x, y] = 0
+                        state[last_eq, y] += state[x, y] # or *2
+                        state[x, y] = 0
                     elif last_0 is not None:
                         # Move our cell and reset previous position
-                        self.state[last_0, y] += self.state[x, y] # or *2
-                        self.state[x, y] = 0
+                        state[last_0, y] += state[x, y] # or *2
+                        state[x, y] = 0
                     else: # No nothing. The cell can't move. 
                         ... 
-
+        # End action == 0
         elif action == 1:
              # skip first first row
             for y in self.h_range[1:]:
                 for x in self.w_range:
-                    if self.state[x, y] == 0:
+                    if state[x, y] == 0:
                         continue
                     
                     last_0, last_eq = None, None
                     for yy in self.h_range[y-1::-1]: # loop in inverse order from current col to first
-                        if self.state[x, yy] == 0:
+                        if state[x, yy] == 0:
                             last_0 = yy
                         else:
-                            if self.state[x, yy] == self.state[x, y]: 
+                            if state[x, yy] == state[x, y]: 
                                 last_eq = yy
                             break # found an obstacle
                     
                     if last_eq is not None:
                         # Update points with the cell value
-                        self._update_reward(self.state[x, y])
+                        if update_reward:
+                            self._update_reward(state[x, y])
                         
                         # Merge the two equal cells and reset ours
-                        self.state[x, last_eq] += self.state[x, y] # or *2
-                        self.state[x, y] = 0
+                        state[x, last_eq] += state[x, y] # or *2
+                        state[x, y] = 0
                     elif last_0 is not None:
                         # Move our cell and reset previous position
-                        self.state[x, last_0] += self.state[x, y] # or *2
-                        self.state[x, y] = 0
+                        state[x, last_0] += state[x, y] # or *2
+                        state[x, y] = 0
                     else: # No nothing. The cell can't move. 
                         ... 
-
+        # End action == 1
         elif action == 2:
             # skip first last column
             for x in self.w_range[-2::-1]:
                 for y in self.h_range:
-                    if self.state[x, y] == 0:
+                    if state[x, y] == 0:
                         continue
                     
                     last_0, last_eq = None, None
                     for xx in self.w_range[x+1:]: # loop in inverse order from current col to first
-                        if self.state[xx, y] == 0:
+                        if state[xx, y] == 0:
                             last_0 = xx
                         else:
-                            if self.state[xx, y] == self.state[x, y]: 
+                            if state[xx, y] == state[x, y]: 
                                 last_eq = xx
                             break # found an obstacle
                     
                     if last_eq is not None:
                         # Update points with the cell value
-                        self._update_reward(self.state[x, y])
+                        if update_reward:
+                            self._update_reward(state[x, y])
                         
                         # Merge the two equal cells and reset ours
-                        self.state[last_eq, y] += self.state[x, y] # or *2
-                        self.state[x, y] = 0
+                        state[last_eq, y] += state[x, y] # or *2
+                        state[x, y] = 0
                     elif last_0 is not None:
                         # Move our cell and reset previous position
-                        self.state[last_0, y] += self.state[x, y] # or *2
-                        self.state[x, y] = 0
+                        state[last_0, y] += state[x, y] # or *2
+                        state[x, y] = 0
                     else: # No nothing. The cell can't move. 
                         ... 
-        
+        # End action == 2
         elif action == 3:
              # skip first last row
             for y in self.h_range[-2::-1]:
                 for x in self.w_range:
-                    if self.state[x, y] == 0:
+                    if state[x, y] == 0:
                         continue
                     
                     last_0, last_eq = None, None
                     for yy in self.h_range[y+1:]: # loop in inverse order from current col to first
-                        if self.state[x, yy] == 0:
+                        if state[x, yy] == 0:
                             last_0 = yy
                         else:
-                            if self.state[x, yy] == self.state[x, y]: 
+                            if state[x, yy] == state[x, y]: 
                                 last_eq = yy
                             break # found an obstacle
                     
                     if last_eq is not None:
                         # Update points with the cell value
-                        self._update_reward(self.state[x, y])
+                        if update_reward:
+                            self._update_reward(state[x, y])
                         
                         # Merge the two equal cells and reset ours
-                        self.state[x, last_eq] += self.state[x, y] # or *2
-                        self.state[x, y] = 0
+                        state[x, last_eq] += state[x, y] # or *2
+                        state[x, y] = 0
                     elif last_0 is not None:
                         # Move our cell and reset previous position
-                        self.state[x, last_0] += self.state[x, y] # or *2
-                        self.state[x, y] = 0
+                        state[x, last_0] += state[x, y] # or *2
+                        state[x, y] = 0
                     else: # No nothing. The cell can't move. 
                         ... 
+        # End action == 3
+        return state
+
+    def _update_sub_states(self):
+        """Update each sub state based on the original one with each possible movement
+        """
+        for idx, action in enumerate(range(self.action_space.n), 1):
+            self.state[idx] = self._make_movement(action, self.state[0], update_reward=False)
 
     def _render_frame(self):
+        """Render one frame based on the base state. Uses pygame"""
         # ================================================================
         #                            BASIC RENDER
         # ================================================================
@@ -475,10 +575,9 @@ class Env2048(Env):
         font = self._render_font
 
         # =============== NUMBERS ===============
-
         for x in self.w_range:
             for y in self.h_range:
-                number = self.state[x, y]
+                number = self.state[0, x, y]
                 text_surf = font.render(
                     str(number), 
                     True, 
