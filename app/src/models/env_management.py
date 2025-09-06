@@ -17,8 +17,14 @@ def get_shape_from_envs(envs: gym.Env) -> tuple:
         tuple: 
             - State shape
             - Actions shape
+            - Continuous or not bool
     """
-    return envs.single_observation_space.shape, envs.single_action_space.n
+    continuous = isinstance(envs.single_action_space, gym.spaces.Box)
+    return (
+        envs.single_observation_space.shape, 
+        envs.single_action_space.shape if continuous else envs.single_action_space.n, 
+        continuous
+    )
 
 def handle_states(CONFIG: Configuration, states: Any) -> torch.Tensor:
     """Convert environment observations to a PyTorch tensor on the correct device.
@@ -58,7 +64,7 @@ def get_envs(CONFIG: Configuration, evaluating: bool = False) -> gym.vector.Sync
         get_env_trunk(CONFIG, idx, evaluating)
         for idx in range(CONFIG.n_envs)
     ])
-    assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete actions space is supported"
+    # assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete actions space is supported"
 
     return envs
 

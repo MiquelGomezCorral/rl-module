@@ -4,6 +4,7 @@ from typing import Any
 import torch
 import torch.nn as nn
 from torch.distributions.categorical import Categorical
+from torch.distributions.normal import Normal
 
 
 class ACAgent(nn.Module):
@@ -21,7 +22,7 @@ class ACAgent(nn.Module):
             Defaults to [64, 128, 256, 256, 256, 128, 64].
     """
     def __init__(
-        self, state_space: tuple, action_space: int,
+        self, state_space: tuple, action_space: int, continuous: bool = False,
         hidden_actor: list[int] = [64, 128, 256, 256, 256, 128, 64],
         hidden_critic: list[int] = [64, 128, 256, 256, 256, 128, 64],
     ):
@@ -33,8 +34,13 @@ class ACAgent(nn.Module):
         self.hidden_actor = hidden_actor   # output action
         self.hidden_critic = hidden_critic # output action
 
-        self.actor = build_mlp(self.state_space, self.action_space, hidden_actor, out_std=0.01)
-        self.critic = build_mlp(self.state_space, 1, hidden_critic, out_std=1.0)
+        self.actor = build_mlp(self.state_space, self.action_space, hidden_actor, out_std=0.01, continuous=continuous)
+        self.critic = build_mlp(self.state_space, 1, hidden_critic, out_std=1.0, continuous=False) # do not change the last layer
+
+        self.continuous = continuous
+        if self.continuous:
+            # actor log standard deviation, each is independent from each other
+            self.actor_logstd = nn.Parameter(torch.zeros(1, np.prod(action_space)))
 
 
     def get_value(self, state: np.ndarray):
@@ -64,13 +70,27 @@ class ACAgent(nn.Module):
                 entropy (torch.Tensor): Entropy of the policy distribution for exploration measurement.
                 value (torch.Tensor): Critic value estimate for the given state(s).
         """
-        logits = self.actor(state)
-        # Softmax like operation
-        probs = Categorical(logits=logits)
-        if action is None:
-            action = probs.sample()
+        if self.continuous:
+            # Sample normal distributions per each output action
+            action_mean = self.actor(state)
+            action_logstd = self.actor_logstd.expand_as(action_mean)
+            action_std = torch.exp(action_logstd)
+            probs = Normal(action_mean, action_std)
+        else:
+            # Get a discrete action with a Softmax like operation 
+            logits = self.actor(state)
+            probs = Categorical(logits=logits)
 
-        return action, probs.log_prob(action), probs.entropy(), self.critic(state)
+
+        # To get the probs when actions has been already taken
+        action = probs.sample() if action is None else action
+
+        # Sum the logs probs bc independent if continuous or something 
+        log_prob, entropy = probs.log_prob(action), probs.entropy()
+        if self.continuous:
+            log_prob, entropy = log_prob.sum(1), entropy.sum(1)
+
+        return action, log_prob, entropy, self.critic(state)
 
 
 
@@ -92,7 +112,7 @@ def layer_init(layer: Any, std: float = np.sqrt(2), bias_const: float = 0.0) -> 
     torch.nn.init.constant_(layer.bias, bias_const)
     return layer
 
-def build_mlp(in_dim: int, out_dim: int, hidden_sizes: list[int], out_std: float):
+def build_mlp(in_dim: int, out_dim: int, hidden_sizes: list[int], out_std: float, continuous: bool = False):
     """Builds the sequential layers for a submodel.
 
     Args:
@@ -111,5 +131,9 @@ def build_mlp(in_dim: int, out_dim: int, hidden_sizes: list[int], out_std: float
         layers += [layer_init(nn.Linear(prev, h)), nn.Tanh()]
         prev = h
     # Out size for out layer
-    layers.append(layer_init(nn.Linear(prev, out_dim), std=out_std))
+    if continuous:
+        layers.append(layer_init(nn.Linear(prev, np.prod(out_dim)), std=out_std))
+    else:
+        layers.append(layer_init(nn.Linear(prev, out_dim), std=out_std))
+
     return nn.Sequential(*layers)

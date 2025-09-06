@@ -2,7 +2,7 @@ import time
 import numpy as np
 from tqdm import tqdm
 
-from maikol_utils.print_utils import print_separator
+from maikol_utils.print_utils import print_separator, print_color
 from maikol_utils.time_tracker import print_time
 
 import torch
@@ -28,7 +28,7 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
     print(f" - Creating envs...")
     # envs = create_env(CONFIG)
     envs = get_envs(CONFIG)
-    state_shape, action_shape = get_shape_from_envs(envs)
+    state_shape, action_shape, continuous = get_shape_from_envs(envs)
     # ================================================================
     #                           AGENT & VARS
     # ================================================================
@@ -44,7 +44,12 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
         if loaded_agent is not None:
             agent = loaded_agent
 
-    print(f" - Observation dimension: {agent.state_space}. Action dimensions: {agent.action_space}")
+    print(" - Env features")
+    print(
+        f"   - Observation dim: {print_color(agent.state_space, color='green', print_text=False)} \n"
+        f"   - Action dim:      {print_color(agent.action_space, color='green', print_text=False)} "
+        f"({print_color('continuous' if continuous else 'discrete', color='green', print_text=False)})"
+    )
     # ================== OTHERS ==================
     global_step = 0
     start_time  = time.time()
@@ -55,7 +60,10 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
     # ================== VARS ==================
     # Store setup
     states = torch.zeros((CONFIG.n_steps, CONFIG.n_envs) + state_shape).to(CONFIG.device)
-    actions  = torch.zeros((CONFIG.n_steps, CONFIG.n_envs)).to(CONFIG.device)
+    if continuous:
+        actions  = torch.zeros((CONFIG.n_steps, CONFIG.n_envs) + action_shape).to(CONFIG.device)
+    else: 
+        actions  = torch.zeros((CONFIG.n_steps, CONFIG.n_envs)).to(CONFIG.device)
     logprobs = torch.zeros((CONFIG.n_steps, CONFIG.n_envs)).to(CONFIG.device)
     rewards  = torch.zeros((CONFIG.n_steps, CONFIG.n_envs)).to(CONFIG.device)
     dones    = torch.zeros((CONFIG.n_steps, CONFIG.n_envs)).to(CONFIG.device)
@@ -141,9 +149,11 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
 
         # 4. flatten the batch
         b_states = states.reshape((-1,) + state_shape)
-        b_logprobs   = logprobs.reshape(-1)
-        # b_actions    = actions.reshape((-1, action_shape))
-        b_actions    = actions.reshape(-1)
+        b_logprobs = logprobs.reshape(-1)
+        if continuous:
+            b_actions = actions.reshape((-1,) + action_shape)
+        else:
+            b_actions = actions.reshape(-1)
         b_advantages = advantages.reshape(-1)
         b_returns    = returns.reshape(-1)
         b_values     = values.reshape(-1)
@@ -159,10 +169,14 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
                 end = start + CONFIG.mini_batch_size
                 mb_ids = b_ids[start:end] # Mini batch indices
 
-                # 5.2 Train beggins
-                _, new_log_probs, entropy, new_values = agent.get_action_value(
-                    b_states[mb_ids], b_actions.long()[mb_ids]
-                )
+                # 5.2 Train begins
+                b_state = b_states[mb_ids]
+                b_act = b_actions[mb_ids] 
+                if not agent.continuous:
+                    b_act = b_act.long() # convert into integer for discrete actions
+
+                _, new_log_probs, entropy, new_values = agent.get_action_value(b_state, b_act)
+
                 log_ratio = new_log_probs - b_logprobs[mb_ids]
                 ratio = log_ratio.exp()
 

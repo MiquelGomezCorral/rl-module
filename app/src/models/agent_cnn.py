@@ -23,7 +23,7 @@ class ACAgentCNN(ACAgent):
         cnn_feature_dim (int, optional): Output feature dimension from CNN encoder.
     """
     def __init__(
-        self, state_space: tuple, action_space: int,
+        self, state_space: tuple, action_space: int, contunuous: bool = False,
         hidden_actor: list[int] = [256, 128, 64],
         hidden_critic: list[int] = [256, 128, 64],
         cnn_input_channels: int = 4, cnn_feature_dim: int = 512
