@@ -3,9 +3,23 @@ from typing import Any
 import gymnasium as gym
 
 from src.config import Configuration
+from src.custom_envs import Env2048
 
 import ale_py
 gym.register_envs(ale_py)
+
+
+CUSTOM_MODELS_LIST = {
+    "Env2048": Env2048,
+}
+def make_env_with_customs(CONFIG: Configuration):
+    if CONFIG.env_id in CUSTOM_MODELS_LIST:
+        return CUSTOM_MODELS_LIST[CONFIG.env_id]()
+    
+    return gym.make(
+        CONFIG.env_id, 
+        render_mode = "rgb_array" if CONFIG.record_video else None
+    )
 
 def get_shape_from_envs(envs: gym.Env) -> tuple:
     """Given the vectorized envs object, return the shape
@@ -78,10 +92,8 @@ def create_env(CONFIG: Configuration, idx: int, evaluating: bool = False) -> gym
     Returns:
         gym.Env: Created env for CONFIG.gym_id env
     """
-    env = gym.make(
-        CONFIG.env_id, 
-        render_mode = "rgb_array" if CONFIG.record_video else None
-    )
+    env = make_env_with_customs(CONFIG)
+
     env = gym.wrappers.RecordEpisodeStatistics(env)
     
     if CONFIG.record_video and (evaluating or idx == 0): # capture only the first 4 videos
