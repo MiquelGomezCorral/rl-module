@@ -45,7 +45,7 @@ def save_agent(CONFIG: Configuration, agent: ACAgent) -> None:
     make_dirs(CONFIG.models_path)
     agent_state = {
         "agent_state_dict": agent.state_dict(),
-        "state_space": agent.state_space,
+        "state_space": agent.base_state_space,
         "action_space": agent.action_space,
         "hidden_actor": agent.hidden_actor,
         "hidden_critic": agent.hidden_critic,
@@ -81,7 +81,7 @@ def load_agent(CONFIG: Configuration, agent: ACAgent = None) -> ACAgent:
     """
     if agent is None:
         envs = get_envs(CONFIG)
-        agent = get_agent_from_config(CONFIG, envs)
+        # agent = get_agent_from_config(CONFIG, envs)
 
     if CONFIG.model_version is None:
         trained_agents, _ = list_dir_files(CONFIG.models_path)
@@ -154,10 +154,9 @@ def save_checkpoint(
 
     checkpoint_path = os.path.join(CONFIG.checkpoint_path, f"{CONFIG.exp_name}-v{CONFIG.keep_last_k-1}.pt")
     
-
     agent_state = {
         "agent_state_dict": agent.state_dict(),
-        "state_space": agent.state_space,
+        "state_space": agent.base_state_space,
         "action_space": agent.action_space,
         "hidden_actor": agent.hidden_actor,
         "hidden_critic": agent.hidden_critic,
@@ -203,7 +202,7 @@ def load_checkpoint(
         return None, 0  # Start from scratch
     
     checkpoint = torch.load(checkpoint_path, map_location=CONFIG.device, weights_only=False)
-
+    print(f"{checkpoint["state_space"] = }")
     if CONFIG.convolutional:
         agent = ACAgentCNN(
             checkpoint["state_space"],

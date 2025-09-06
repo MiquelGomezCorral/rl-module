@@ -33,14 +33,14 @@ class ACAgentCNN(ACAgent):
         ],
         cnn_input_channels: int = 4, cnn_feature_dim: int = 512
     ):
-        super(ACAgentCNN, self).__init__(state_space, action_space, hidden_actor, hidden_critic)
+        super(ACAgentCNN, self).__init__(state_space, action_space, continuous, hidden_actor, hidden_critic)
 
- 
-        if len(state_space) == 3:
-            input_shape = (cnn_input_channels, state_space[1], state_space[2])  
+        if len(self.base_state_space) == 3:
+            input_shape = (cnn_input_channels, self.base_state_space[1], self.base_state_space[2])  
         else: 
-            input_shape = (cnn_input_channels, state_space[0], state_space[1])
+            input_shape = (cnn_input_channels, self.base_state_space[0], self.base_state_space[1])
 
+        self.cnn_layers = cnn_layers
         self.cnn = build_cnn(input_shape, cnn_feature_dim, cnn_layers=cnn_layers, activation=nn.ReLU)
 
 
@@ -51,7 +51,6 @@ class ACAgentCNN(ACAgent):
         self.actor = build_mlp(self.cnn_feature_dim, self.action_space, hidden_actor, out_std=0.01, continuous=continuous)
         self.critic = build_mlp(self.cnn_feature_dim, 1, hidden_critic, out_std=1.0, continuous=False) # do not change the last layer
 
-        self.continuous = continuous
         if self.continuous:
             self.actor_logstd = nn.Parameter(torch.zeros(1, np.prod(action_space)))
 
@@ -129,7 +128,6 @@ class ACAgentCNN(ACAgent):
             logits = self.actor(features)
             probs = Categorical(logits=logits)
 
-
         # To get the probs when actions has been already taken
         action = probs.sample() if action is None else action
 
@@ -163,7 +161,7 @@ def build_cnn(
             out_ch = spec['out']; k = spec['k']; s = spec['s']; p = spec.get('p', 0)
         else:
             out_ch, k, s, p = spec
-            
+
         layers += [layer_init(nn.Conv2d(in_ch, out_ch, kernel_size=k, stride=s, padding=p))]
         layers += [activation()]
         in_ch = out_ch

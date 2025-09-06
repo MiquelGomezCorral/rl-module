@@ -44,8 +44,8 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
         if loaded_agent is not None:
             agent = loaded_agent
 
-    print(" - Env features")
     print(
+        "- Env features"
         f"   - Observation dim: {print_color(agent.state_space, color='green', print_text=False)} \n"
         f"   - Action dim:      {print_color(agent.action_space, color='green', print_text=False)} "
         f"({print_color('continuous' if continuous else 'discrete', color='green', print_text=False)})"
@@ -63,7 +63,7 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
     if continuous:
         actions  = torch.zeros((CONFIG.n_steps, CONFIG.n_envs) + action_shape).to(CONFIG.device)
     else: 
-        actions  = torch.zeros((CONFIG.n_steps, CONFIG.n_envs)).to(CONFIG.device)
+        actions  = torch.zeros((CONFIG.n_steps, CONFIG.n_envs), dtype=torch.long).to(CONFIG.device)
     logprobs = torch.zeros((CONFIG.n_steps, CONFIG.n_envs)).to(CONFIG.device)
     rewards  = torch.zeros((CONFIG.n_steps, CONFIG.n_envs)).to(CONFIG.device)
     dones    = torch.zeros((CONFIG.n_steps, CONFIG.n_envs)).to(CONFIG.device)
@@ -74,7 +74,7 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
     #                       TRAINING LOOP
     # ================================================================
     print_separator("TRAINING", sep_type="SUPER")
-    print(f" - Training for {CONFIG.total_timesteps} time steps and {CONFIG.batch_size} as batch size. {num_updates} updates in total.")
+    print(f" - Training for {CONFIG.total_timesteps} time steps and {CONFIG.batch_size} as batch size. {num_updates + 1} updates in total.")
     if start_update != 1:
         print(f" - Starting at update: {start_update}.")
     # Episodes?

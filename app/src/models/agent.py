@@ -27,6 +27,7 @@ class ACAgent(nn.Module):
     ):
         super(ACAgent, self).__init__()
         
+        self.base_state_space = state_space
         self.state_space = np.array(state_space).prod() # input state
         self.action_space = action_space                # output action
 
