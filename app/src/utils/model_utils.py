@@ -21,10 +21,10 @@ def get_agent_from_config(CONFIG: Configuration, envs: gym.vector.SyncVectorEnv)
     Returns:
         ACAgent: Empty agent 
     """
-    if not CONFIG.convolutional:
-        return ACAgent(*get_shape_from_envs(envs)).to(CONFIG.device)
-    else:
+    if CONFIG.convolutional:
         return ACAgentCNN(*get_shape_from_envs(envs)).to(CONFIG.device)
+    else:
+        return ACAgent(*get_shape_from_envs(envs)).to(CONFIG.device)
 
 def save_agent(CONFIG: Configuration, agent: ACAgent) -> None:
     """Saves the agent in memory.
@@ -43,7 +43,7 @@ def save_agent(CONFIG: Configuration, agent: ACAgent) -> None:
         model_path = os.path.join(CONFIG.models_path, f"{CONFIG.exp_name}-v{version}.pt")
     
     make_dirs(CONFIG.models_path)
-    torch.save({
+    agent_state = {
         "agent_state_dict": agent.state_dict(),
         "state_space": agent.state_space,
         "action_space": agent.action_space,
@@ -53,7 +53,13 @@ def save_agent(CONFIG: Configuration, agent: ACAgent) -> None:
         "optimizer_state_dict": None,
         "update": None,
         "config": CONFIG,
-    }, model_path)
+    }
+    if CONFIG.convolutional:
+        agent_state["cnn_layers"] = agent.cnn_layers 
+        agent_state["cnn_input_channels"] = agent.cnn_input_channels 
+        agent_state["cnn_feature_dim"] = agent.cnn_feature_dim 
+
+    torch.save(agent_state, model_path)
 
     print(f" - Model saved to {model_path}")
     
@@ -75,7 +81,7 @@ def load_agent(CONFIG: Configuration, agent: ACAgent = None) -> ACAgent:
     """
     if agent is None:
         envs = get_envs(CONFIG)
-        agent = ACAgent(*get_shape_from_envs(envs))
+        agent = get_agent_from_config(CONFIG, envs)
 
     if CONFIG.model_version is None:
         trained_agents, _ = list_dir_files(CONFIG.models_path)
@@ -88,13 +94,26 @@ def load_agent(CONFIG: Configuration, agent: ACAgent = None) -> ACAgent:
         print(f" - Loading agent at {agent_path}")
         loaded_agent = torch.load(agent_path, map_location=CONFIG.device, weights_only=False)
 
-        agent = ACAgent(
-            loaded_agent["state_space"],
-            loaded_agent["action_space"],
-            loaded_agent["continuous"],
-            loaded_agent["hidden_actor"],
-            loaded_agent["hidden_critic"],
-        ).to(CONFIG.device)
+        if CONFIG.convolutional:
+            agent = ACAgentCNN(
+                loaded_agent["state_space"],
+                loaded_agent["action_space"],
+                loaded_agent["continuous"],
+                loaded_agent["hidden_actor"],
+                loaded_agent["hidden_critic"],
+                loaded_agent["cnn_layers"],
+                loaded_agent["cnn_input_channels"],
+                loaded_agent["cnn_feature_dim"],
+            ).to(CONFIG.device)
+
+        else:
+            agent = ACAgent(
+                loaded_agent["state_space"],
+                loaded_agent["action_space"],
+                loaded_agent["continuous"],
+                loaded_agent["hidden_actor"],
+                loaded_agent["hidden_critic"],
+            ).to(CONFIG.device)
         agent.load_state_dict(loaded_agent["agent_state_dict"])
 
         agent.to(CONFIG.device)
@@ -135,7 +154,8 @@ def save_checkpoint(
 
     checkpoint_path = os.path.join(CONFIG.checkpoint_path, f"{CONFIG.exp_name}-v{CONFIG.keep_last_k-1}.pt")
     
-    torch.save({
+
+    agent_state = {
         "agent_state_dict": agent.state_dict(),
         "state_space": agent.state_space,
         "action_space": agent.action_space,
@@ -145,7 +165,13 @@ def save_checkpoint(
         "optimizer_state_dict": optimizer.state_dict(),
         "update": update,
         "config": CONFIG,
-    }, checkpoint_path)
+    }
+    if CONFIG.convolutional:
+        agent_state["cnn_layers"] = agent.cnn_layers 
+        agent_state["cnn_input_channels"] = agent.cnn_input_channels 
+        agent_state["cnn_feature_dim"] = agent.cnn_feature_dim 
+        
+    torch.save(agent_state, checkpoint_path)
 
 
 def load_checkpoint(
@@ -177,13 +203,27 @@ def load_checkpoint(
         return None, 0  # Start from scratch
     
     checkpoint = torch.load(checkpoint_path, map_location=CONFIG.device, weights_only=False)
-    agent = ACAgent(
-        checkpoint["state_space"],
-        checkpoint["action_space"],
-        checkpoint["continuous"],
-        checkpoint["hidden_actor"],
-        checkpoint["hidden_critic"],
-    ).to(CONFIG.device)
+
+    if CONFIG.convolutional:
+        agent = ACAgentCNN(
+            checkpoint["state_space"],
+            checkpoint["action_space"],
+            checkpoint["continuous"],
+            checkpoint["hidden_actor"],
+            checkpoint["hidden_critic"],
+            checkpoint["cnn_layers"],
+            checkpoint["cnn_input_channels"],
+            checkpoint["cnn_feature_dim"],
+        ).to(CONFIG.device)
+
+    else:
+        agent = ACAgent(
+            checkpoint["state_space"],
+            checkpoint["action_space"],
+            checkpoint["continuous"],
+            checkpoint["hidden_actor"],
+            checkpoint["hidden_critic"],
+        ).to(CONFIG.device)
 
     agent.load_state_dict(checkpoint["agent_state_dict"])
     optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
