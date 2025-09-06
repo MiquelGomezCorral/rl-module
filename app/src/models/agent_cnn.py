@@ -31,9 +31,10 @@ class ACAgentCNN(ACAgent):
             {'out': 64, 'k': 4, 's': 2, 'p': 0},
             {'out': 64, 'k': 3, 's': 1, 'p': 0},
         ],
-        cnn_input_channels: int = 4, cnn_feature_dim: int = 512
+        cnn_input_channels: int = 4, cnn_feature_dim: int = 512,
+        device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     ):
-        super(ACAgentCNN, self).__init__(state_space, action_space, continuous, hidden_actor, hidden_critic)
+        super(ACAgentCNN, self).__init__(state_space, action_space, continuous, hidden_actor, hidden_critic, device)
 
         if len(self.base_state_space) == 3:
             input_shape = (cnn_input_channels, self.base_state_space[1], self.base_state_space[2])  
