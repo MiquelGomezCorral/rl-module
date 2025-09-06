@@ -24,8 +24,11 @@ class ACAgent(nn.Module):
         self, state_space: tuple, action_space: int, continuous: bool = False,
         hidden_actor: list[int] = [64, 128, 256, 256, 256, 128, 64],
         hidden_critic: list[int] = [64, 128, 256, 256, 256, 128, 64],
+        device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     ):
         super(ACAgent, self).__init__()
+
+        self.device = device
         
         self.base_state_space = state_space
         self.state_space = np.array(state_space).prod() # input state
@@ -42,6 +45,34 @@ class ACAgent(nn.Module):
             # actor log standard deviation, each is independent from each other
             self.actor_logstd = nn.Parameter(torch.zeros(1, np.prod(action_space)))
 
+    def handle_input_state(self, state: np.ndarray) -> np.ndarray:
+        """Properly handles and flattens the input state
+
+        Args:
+            state (np.ndarray): Input original state
+
+        Returns:
+            np.ndarray: Handled input state
+        """
+        if isinstance(state, np.ndarray):
+            state = torch.from_numpy(state)
+        elif not isinstance(state, torch.Tensor):
+            state = torch.tensor(state)
+
+        state = state.to(self.device)
+        if not state.is_floating_point():
+            state = state.float()
+
+        # ensure batch dimension
+        if state.dim() == len(self.base_state_space):
+            state = state.unsqueeze(0)  # single sample
+        # flatten everything after batch
+        state = state.view(state.size(0), -1)
+        
+        # Check that input matches network
+        assert state.size(1) == self.state_space, f"Input features {state.size(1)} != expected {self.state_space}"
+
+        return state
 
     def get_value(self, state: np.ndarray):
         """Get the critic value for state 
@@ -52,7 +83,7 @@ class ACAgent(nn.Module):
         Returns:
             tensor: The evaluated tensor
         """
-        return self.critic(state)
+        return self.critic(self.handle_input_state(state))
     
 
     def get_action_value(self, state, action=None) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -70,6 +101,13 @@ class ACAgent(nn.Module):
                 entropy (torch.Tensor): Entropy of the policy distribution for exploration measurement.
                 value (torch.Tensor): Critic value estimate for the given state(s).
         """
+        # =========================================================================
+        #                           Flatten input into array
+        # =========================================================================
+        state = self.handle_input_state(state)
+        # =========================================================================
+        #                           Make the action prediction
+        # =========================================================================
         if self.continuous:
             # Sample normal distributions per each output action
             action_mean = self.actor(state)
@@ -89,6 +127,7 @@ class ACAgent(nn.Module):
         log_prob, entropy = probs.log_prob(action), probs.entropy()
         if self.continuous:
             log_prob, entropy = log_prob.sum(1), entropy.sum(1)
+
 
         return action, log_prob, entropy, self.critic(state)
 
