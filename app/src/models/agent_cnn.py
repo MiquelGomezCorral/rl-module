@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+import numpy as np
 from torch.distributions import Categorical
 
 from src.models.agent import ACAgent, build_mlp, layer_init
@@ -63,6 +65,30 @@ class ACAgentCNN(ACAgent):
         Returns:
             torch.Tensor: Encoded feature vector of shape (B, feature_dim).
         """
+        # normalize pixels
+        # if x.ndim == 4 and x.shape[1] != self.cnn_input_channels:
+        #     # assume (B, H, W, C) from gym → convert to (B, C, H, W)
+        #     x = x.permute(0, 3, 1, 2)
+
+        # ensure tensor on model device
+        device = next(self.parameters()).device
+        if isinstance(x, np.ndarray):
+            x = torch.from_numpy(x)
+        x = x.to(device)
+
+        # convert HWC -> CHW if needed (gym returns H,W,C)
+        if x.ndim == 4 and x.shape[1] != self.cnn_input_channels:
+            x = x.permute(0, 3, 1, 2)
+
+        x = x.float()
+
+        # quick sanity checks
+        if torch.isnan(x).any() or torch.isinf(x).any():
+            raise RuntimeError("NaN or Inf in observation tensor (forward_features)")
+
+        # debug: shapes and ranges (remove or guard with a DEBUG flag)
+        print("forward_features: shape", tuple(x.shape), "dtype", x.dtype, "min,max",
+            float(x.min()), float(x.max()))
         return self.cnn(x / 255.0)  # normalize pixels
     
     def get_value(self, state: torch.Tensor):

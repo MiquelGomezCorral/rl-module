@@ -87,9 +87,9 @@ def create_env(CONFIG: Configuration, idx: int, evaluating: bool = False) -> gym
         )
 
     if CONFIG.convolutional:
-        env = gym.wrappers.GrayscaleObservation(env)
-        env = gym.wrappers.ResizeObservation(env, shape=(84, 84))
-        env = gym.wrappers.FrameStackObservation(env, 4)
+        env = gym.wrappers.GrayscaleObservation(env) # Convert to grayscale if colors are not important
+        env = gym.wrappers.ResizeObservation(env, shape=(84, 84)) # Reshape the image
+        env = gym.wrappers.FrameStackObservation(env, 4) # Last for frames
 
     # NOTE: This seeds are different from the code seeds and are different for different envs
     seed = CONFIG.seed + idx 
