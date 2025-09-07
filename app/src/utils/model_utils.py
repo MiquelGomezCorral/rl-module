@@ -7,6 +7,7 @@ from src.models import ACAgent, ACAgentCNN, get_envs, get_shape_from_envs
 from src.config import Configuration
 
 from maikol_utils.file_utils import list_dir_files, make_dirs
+from maikol_utils.print_utils import print_color
 
 # =================================================================================
 #                                    MODEL
@@ -186,7 +187,7 @@ def load_checkpoint(
     checkpoints, n_files = list_dir_files(CONFIG.checkpoint_path)
     # From the model path, get the name (no extension), split by version and keep the number
     if n_files == 0:
-        print(" - No checkpoint found.")
+        print_color(" - No checkpoint found.", color="yellow")
         return None, 0  # Start from scratch
     
     agent_name = os.path.basename(checkpoints[-1])
@@ -194,11 +195,10 @@ def load_checkpoint(
     checkpoint_path = os.path.join(CONFIG.checkpoint_path, f"{CONFIG.exp_name}-v{check_number}.pt")
     
     if not os.path.exists(checkpoint_path):
-        print(" - No checkpoint found.")
+        print_color(" - No checkpoint found.", color="yellow")
         return None, 0  # Start from scratch
     
     checkpoint = torch.load(checkpoint_path, map_location=CONFIG.device, weights_only=False)
-    print(f"{checkpoint["state_space"] = }")
     if CONFIG.convolutional:
         agent = ACAgentCNN(
             checkpoint["state_space"],
@@ -222,6 +222,6 @@ def load_checkpoint(
 
     agent.load_state_dict(checkpoint["agent_state_dict"])
     optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-    print(f" - Checkpoint loaded from {checkpoint_path}")
+    print_color(f" - Checkpoint loaded from {checkpoint_path}", color="green")
 
     return agent, checkpoint["update"] # start from this update

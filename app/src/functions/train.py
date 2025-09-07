@@ -45,7 +45,7 @@ def train_ppo(CONFIG: Configuration, writer: SummaryWriter) -> None:
             agent = loaded_agent
 
     print(
-        "- Env features"
+        " - Env features"
         f"   - Observation dim: {print_color(agent.state_space, color='green', print_text=False)} \n"
         f"   - Action dim:      {print_color(agent.action_space, color='green', print_text=False)} "
         f"({print_color('continuous' if continuous else 'discrete', color='green', print_text=False)})"
