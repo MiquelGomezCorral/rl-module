@@ -64,7 +64,7 @@ def save_agent(CONFIG: Configuration, agent: ACAgent) -> None:
     print(f" - Model saved to {model_path}")
     
 
-def load_agent(CONFIG: Configuration, agent: ACAgent = None) -> ACAgent:
+def load_agent(CONFIG: Configuration) -> ACAgent:
     """Load and agent from memory. If no agent passed, create one from config.
 
     If config has no version specified, it will look for the newest.
@@ -79,10 +79,6 @@ def load_agent(CONFIG: Configuration, agent: ACAgent = None) -> ACAgent:
     Returns:
         AgentAC: Loaded model
     """
-    if agent is None:
-        envs = get_envs(CONFIG)
-        # agent = get_agent_from_config(CONFIG, envs)
-
     if CONFIG.model_version is None:
         trained_agents, _ = list_dir_files(CONFIG.models_path)
         # From the model path, get the name (no extension), split by version and keep the number

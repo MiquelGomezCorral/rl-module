@@ -74,6 +74,10 @@ def parse_args_config():
         "-rv", "--remove_old_video", action='store_true', default=False,
         help="if toggled (-rv), videos of the execution of the model will be recorded and saved."
     )
+    p_ppo_train.add_argument(
+        "-rt", "--remove_temp", action='store_false', default=True,
+        help="if NOT toggled (-rv), temp files will be deleted when finished the execution."
+    )
     
 
     # ===================== ENV =====================
@@ -194,6 +198,10 @@ def parse_args_config():
     p_ppo_eval.add_argument(
         "-rv", "--remove_old_video", action='store_true', default=False,
         help="if toggled (-rv), videos of the execution of the model will be recorded and saved."
+    )
+    p_ppo_eval.add_argument(
+        "-rt", "--remove_temp", action='store_false', default=True,
+        help="if NOT toggled (-rv), temp files will be deleted when finished the execution."
     )
     
 

@@ -16,6 +16,7 @@ class Configuration:
     seed:            int = 42
     record_video:   bool = False
     remove_old_video: bool = False
+    remove_temp:    bool = False
     fps:             int = 30
     n_eval_steps:    int = 20_000
 
