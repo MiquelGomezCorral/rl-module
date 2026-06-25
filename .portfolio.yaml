@@ -10,7 +10,7 @@ descriptionLong:
     A reusable reinforcement learning Python module designed to accelerate RL experimentation across projects. Built around the Gymnasium environment standard and based on the Hugging Face Deep RL Course plus W&B video tutorials. Provides modular components that can be imported and adapted to various RL tasks. Features automatic CNN detection for image-based observation spaces (use -cnn flag), editable pip install for seamless cross-project imports, and clean separation between environment setup and model training. Serves as the RL foundation used in several of my other projects.
   es: |
     Un módulo de reinforcement learning en Python reutilizable diseñado para acelerar la experimentación RL entre proyectos. Construido sobre el estándar de entornos Gymnasium y basado en el Hugging Face Deep RL Course más tutoriales de W&B. Proporciona componentes modulares importables y adaptables a diversas tareas RL. Incluye detección automática de CNN para espacios de observación basados en imágenes (flag -cnn), instalación pip editable para importaciones fluidas entre proyectos, y separación limpia entre configuración de entorno y entrenamiento de modelo. Sirve como base de RL usada en varios de mis otros proyectos.
-technologies: [python, reinforcement-learning]
+technologies: [python, reinforcement-learning, ai]
 tags: [other]
 date:
   en: Aug 2025
@@ -21,5 +21,6 @@ keywords:
 slug: rl-module
 order: 32
 featured: false
+
 
 
