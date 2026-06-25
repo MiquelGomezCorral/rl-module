@@ -1,6 +1,6 @@
 title:
-  en: "RL Module: Reusable Reinforcement Learning Toolkit"
-  es: "Módulo RL: Toolkit Reutilizable de Reinforcement Learning"
+  en: "RL Module: Reusable Toolkit"
+  es: "Módulo RL: Toolkit Reutilizable"
 finished: finished
 descriptionShort:
   en: Reusable reinforcement learning module built around Gymnasium environments. Based on the Hugging Face Deep RL Course. Provides plug-and-play RL components with CNN support for image-based observations. Designed to be imported into other projects.
